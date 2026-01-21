@@ -1,7 +1,7 @@
 import React from 'react';
 import { History, Info, Palette, Scan, Settings } from 'lucide-react';
 
-export type View = 'portal' | 'home' | 'archive' | 'guide' | 'profile';
+export type View = 'portal' | 'home' | 'archive' | 'guide' | 'profile' | 'auth';
 
 type NavigationProps = {
   currentView: View;

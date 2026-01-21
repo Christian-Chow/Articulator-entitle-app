@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, LogIn, LogOut } from 'lucide-react';
+import { ArrowLeft, Bell, LogIn, LogOut } from 'lucide-react';
 
 type HeaderProps = {
   subtitle: string;
@@ -7,9 +7,19 @@ type HeaderProps = {
   isLoggedIn: boolean;
   onLoginToggle: () => void;
   onLogoClick: () => void;
+  isAuthView?: boolean;
+  onBack?: () => void;
 };
 
-const Header: React.FC<HeaderProps> = ({ subtitle, title, isLoggedIn, onLoginToggle, onLogoClick }) => (
+const Header: React.FC<HeaderProps> = ({
+  subtitle,
+  title,
+  isLoggedIn,
+  onLoginToggle,
+  onLogoClick,
+  isAuthView = false,
+  onBack,
+}) => (
   <header className="px-6 pt-2 pb-6">
     <div className="flex justify-between items-center mb-8">
       <div className="flex items-center gap-2 group cursor-pointer" onClick={onLogoClick}>
@@ -22,22 +32,32 @@ const Header: React.FC<HeaderProps> = ({ subtitle, title, isLoggedIn, onLoginTog
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          onClick={onLoginToggle}
-          className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95"
-        >
-          {isLoggedIn ? (
-            <>
-              <LogOut size={16} className="text-slate-400" />
-              <span className="text-slate-600 font-bold uppercase tracking-tighter text-[9px]">Exit</span>
-            </>
-          ) : (
-            <>
-              <LogIn size={16} className="text-indigo-500" />
-              <span className="text-indigo-600 font-bold uppercase tracking-tighter text-[9px]">Login</span>
-            </>
-          )}
-        </button>
+        {isAuthView && onBack ? (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95"
+          >
+            <ArrowLeft size={16} className="text-slate-400" />
+            <span className="text-slate-600 font-bold uppercase tracking-tighter text-[9px]">Back</span>
+          </button>
+        ) : (
+          <button
+            onClick={onLoginToggle}
+            className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95"
+          >
+            {isLoggedIn ? (
+              <>
+                <LogOut size={16} className="text-slate-400" />
+                <span className="text-slate-600 font-bold uppercase tracking-tighter text-[9px]">Exit</span>
+              </>
+            ) : (
+              <>
+                <LogIn size={16} className="text-indigo-500" />
+                <span className="text-indigo-600 font-bold uppercase tracking-tighter text-[9px]">Login</span>
+              </>
+            )}
+          </button>
+        )}
         <button className="relative p-2.5 bg-white border border-slate-100 rounded-2xl text-slate-600 shadow-sm hover:shadow-md transition-all">
           <Bell size={20} />
           {isLoggedIn && (
@@ -47,10 +67,12 @@ const Header: React.FC<HeaderProps> = ({ subtitle, title, isLoggedIn, onLoginTog
       </div>
     </div>
 
-    <div className="mb-0">
-      <h2 className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.25em] mb-1">{subtitle}</h2>
-      <h1 className="text-3xl font-serif font-light text-slate-800 italic leading-tight">{title}</h1>
-    </div>
+    {!isAuthView && (
+      <div className="mb-0">
+        <h2 className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.25em] mb-1">{subtitle}</h2>
+        <h1 className="text-3xl font-serif font-light text-slate-800 italic leading-tight">{title}</h1>
+      </div>
+    )}
   </header>
 );
 

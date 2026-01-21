@@ -3,14 +3,15 @@ import { Cpu, QrCode, Zap } from 'lucide-react';
 import Header from './components/Header';
 import Navigation, { type View } from './components/Navigation';
 import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import PortalPage from './pages/PortalPage';
 
 const App = () => {
-  const [view, setView] = useState<View>('portal');
+  const [view, setView] = useState<View>('auth');
   const [isScanning, setIsScanning] = useState(false);
   const [activeScanType, setActiveScanType] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const triggerScan = (type: string) => {
     setActiveScanType(type);
@@ -39,13 +40,23 @@ const App = () => {
         subtitle={headerSubtitle}
         title={headerTitle}
         isLoggedIn={isLoggedIn}
-        onLoginToggle={() => setIsLoggedIn(!isLoggedIn)}
+        onLoginToggle={() => {
+          if (isLoggedIn) {
+            setIsLoggedIn(false);
+            setView('portal');
+          } else {
+            setView('auth');
+          }
+        }}
         onLogoClick={() => setView('portal')}
+        isAuthView={view === 'auth'}
+        onBack={() => setView('portal')}
       />
 
       <main className="px-6">
         {view === 'portal' && <PortalPage onScan={triggerScan} />}
         {view === 'home' && <HomePage isLoggedIn={isLoggedIn} />}
+        {view === 'auth' && <LoginPage onSuccess={() => { setIsLoggedIn(true); setView('portal'); }} />}
         {view === 'archive' && <PlaceholderPage label="Archive" />}
         {view === 'guide' && <PlaceholderPage label="Guide" />}
         {view === 'profile' && <PlaceholderPage label="Profile" />}
@@ -87,7 +98,7 @@ const App = () => {
         </div>
       )}
 
-      <Navigation currentView={view} onNavigate={setView} />
+      {view !== 'auth' && <Navigation currentView={view} onNavigate={setView} />}
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes scan-line {
@@ -106,6 +117,7 @@ const App = () => {
         .modal-fade-in { animation: fadeIn 0.3s ease-out; }
         .gateway-enter { animation: fadeIn 0.5s ease-out; }
         .home-enter { animation: fadeIn 0.4s ease-out; }
+        .auth-enter { animation: fadeIn 0.5s ease-out; }
       `}} />
     </div>
   );
