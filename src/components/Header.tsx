@@ -52,8 +52,8 @@ const Header: React.FC<HeaderProps> = ({
               </>
             ) : (
               <>
-                <LogIn size={16} className="text-indigo-500" />
-                <span className="text-indigo-600 font-bold uppercase tracking-tighter text-[9px]">Login</span>
+                <LogIn size={16} className="text-slate-600" />
+                <span className="text-slate-700 font-bold uppercase tracking-tighter text-[9px]">Login</span>
               </>
             )}
           </button>
