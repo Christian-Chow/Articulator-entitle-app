@@ -70,7 +70,7 @@ const Header: React.FC<HeaderProps> = ({
     {!isAuthView && (
       <div className="mb-0">
         <h2 className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.25em] mb-1">{subtitle}</h2>
-        <h1 className="text-3xl font-serif font-light text-slate-800 italic leading-tight">{title}</h1>
+        <h1 className="text-3xl font-serif font-light text-slate-800 leading-tight">{title}</h1>
       </div>
     )}
   </header>

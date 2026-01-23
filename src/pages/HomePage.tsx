@@ -42,7 +42,7 @@ const HomePage: React.FC<HomePageProps> = ({ isLoggedIn }) => (
   <div className="home-enter">
     <section>
       <div className="flex items-end justify-between mb-5 px-1">
-        <h3 className="font-serif text-xl italic text-slate-800">Explore Services</h3>
+        <h3 className="font-serif text-xl text-slate-800">Explore Services</h3>
         <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Registry v2.4</span>
       </div>
 
@@ -76,7 +76,7 @@ const HomePage: React.FC<HomePageProps> = ({ isLoggedIn }) => (
           </div>
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Asset Registry</p>
-            <p className="text-sm font-serif italic leading-none">
+            <p className="text-sm font-serif leading-none">
               {isLoggedIn ? '12 Secured Assets' : 'No Assets Detected'}
             </p>
           </div>

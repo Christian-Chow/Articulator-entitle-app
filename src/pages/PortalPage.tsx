@@ -8,7 +8,7 @@ type PortalPageProps = {
 const PortalPage: React.FC<PortalPageProps> = ({ onScan }) => (
   <div className="mt-4 gateway-enter">
     <div className="mb-8 px-1">
-      <h3 className="font-serif text-xl italic text-slate-800 mb-2">Identify Artwork</h3>
+      <h3 className="font-serif text-xl text-slate-800 mb-2">Identify Artwork</h3>
       <p className="text-xs text-slate-400 leading-relaxed uppercase tracking-tighter">
         Choose a verification method to unlock the digital registry for your physical piece.
       </p>
@@ -23,7 +23,7 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan }) => (
           <QrCode size={32} strokeWidth={1.5} className="text-white" />
         </div>
         <div className="flex-1">
-          <h4 className="text-lg font-serif italic">Scan PiCode</h4>
+          <h4 className="text-lg font-serif">Scan PiCode</h4>
           <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mt-0.5">Primary Visual ID</p>
         </div>
         <ChevronRight size={20} className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
@@ -37,7 +37,7 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan }) => (
           <Scan size={32} strokeWidth={1.5} />
         </div>
         <div className="flex-1">
-          <h4 className="text-lg font-serif italic">Scan QR Code</h4>
+          <h4 className="text-lg font-serif">Scan QR Code</h4>
           <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mt-0.5">Universal Tracking</p>
         </div>
         <ChevronRight size={20} className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
@@ -51,7 +51,7 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan }) => (
           <Cpu size={32} strokeWidth={1.5} />
         </div>
         <div className="flex-1">
-          <h4 className="text-lg font-serif italic">NFC Registry</h4>
+          <h4 className="text-lg font-serif">NFC Registry</h4>
           <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mt-0.5">Tap Interaction</p>
         </div>
         <ChevronRight size={20} className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />

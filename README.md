@@ -15,12 +15,34 @@ npm run dev
 npm run build
 ```
 
+## Setup
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Configure Supabase:**
+   - Create a `.env` file in the root directory
+   - Add your Supabase credentials:
+     ```
+     VITE_SUPABASE_URL=your_supabase_project_url
+     VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+     ```
+   - Get these values from your [Supabase Dashboard](https://app.supabase.com) → Project Settings → API
+
+3. **Run the app:**
+   ```bash
+   npm run dev
+   ```
+
 ## Stack
 
 - **React 18** + **TypeScript**
 - **Vite**
 - **Tailwind CSS**
 - **lucide-react** (icons)
+- **Supabase** (authentication)
 
 ## Features
 

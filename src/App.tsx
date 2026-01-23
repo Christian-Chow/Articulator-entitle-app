@@ -1,17 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Cpu, QrCode, Zap } from 'lucide-react';
+import { supabase } from './lib/supabase';
+import type { User, Session } from '@supabase/supabase-js';
 import Header from './components/Header';
 import Navigation, { type View } from './components/Navigation';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import PortalPage from './pages/PortalPage';
+import ProfilePage from './pages/ProfilePage';
 
 const App = () => {
   const [view, setView] = useState<View>('auth');
   const [isScanning, setIsScanning] = useState(false);
   const [activeScanType, setActiveScanType] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setUser(session.user);
+        setIsLoggedIn(true);
+        setView('portal');
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setUser(session.user);
+        setIsLoggedIn(true);
+        if (view === 'auth') {
+          setView('portal');
+        }
+      } else {
+        setUser(null);
+        setIsLoggedIn(false);
+        setView('auth');
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsLoggedIn(false);
+    setUser(null);
+    setView('portal');
+  };
 
   const triggerScan = (type: string) => {
     setActiveScanType(type);
@@ -22,8 +66,19 @@ const App = () => {
     }, 2500);
   };
 
-  const headerSubtitle = view === 'portal' ? 'Registry Access' : 'Authenticated Collector';
-  const headerTitle = isLoggedIn ? 'Alex Johnson' : 'Welcome Guest';
+  const headerSubtitle = 
+    view === 'portal' ? 'Registry Access' : 
+    view === 'profile' ? 'Registry Member' : 
+    'Authenticated Collector';
+  const headerTitle = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Welcome Guest';
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#FDFCFB] flex items-center justify-center">
+        <div className="text-slate-400 text-sm">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] pb-32 font-sans text-slate-900 overflow-x-hidden">
@@ -42,8 +97,7 @@ const App = () => {
         isLoggedIn={isLoggedIn}
         onLoginToggle={() => {
           if (isLoggedIn) {
-            setIsLoggedIn(false);
-            setView('portal');
+            handleLogout();
           } else {
             setView('auth');
           }
@@ -56,10 +110,10 @@ const App = () => {
       <main className="px-6">
         {view === 'portal' && <PortalPage onScan={triggerScan} />}
         {view === 'home' && <HomePage isLoggedIn={isLoggedIn} />}
-        {view === 'auth' && <LoginPage onSuccess={() => { setIsLoggedIn(true); setView('portal'); }} />}
+        {view === 'auth' && <LoginPage onSuccess={() => {}} />}
         {view === 'archive' && <PlaceholderPage label="Archive" />}
         {view === 'guide' && <PlaceholderPage label="Guide" />}
-        {view === 'profile' && <PlaceholderPage label="Profile" />}
+        {view === 'profile' && <ProfilePage user={user} onLogout={handleLogout} />}
       </main>
 
       {/* Scanning modal */}
@@ -80,7 +134,7 @@ const App = () => {
             </div>
           </div>
           <div className="mt-16 text-center">
-            <h2 className="text-2xl font-serif italic tracking-wide">
+            <h2 className="text-2xl font-serif tracking-wide">
               {activeScanType === 'NFC' ? 'Awaiting Tag...' : `Reading ${activeScanType}...`}
             </h2>
             <p className="mt-3 text-slate-400 text-[10px] uppercase tracking-[0.2em] font-medium max-w-[220px] mx-auto leading-relaxed">
