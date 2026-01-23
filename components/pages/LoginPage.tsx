@@ -1,6 +1,8 @@
+'use client'
+
 import React, { useState } from 'react';
 import { AtSign, Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 type LoginPageProps = {
   onSuccess: () => void;

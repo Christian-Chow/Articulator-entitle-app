@@ -1,5 +1,8 @@
+'use client'
+
 import React from 'react';
 import { ArrowLeft, Bell, LogIn, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 type HeaderProps = {
   subtitle: string;

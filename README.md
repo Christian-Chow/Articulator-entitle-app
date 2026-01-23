@@ -1,53 +1,78 @@
 # Articulator Entitle App
 
-A React app for an art authentication and collector registry. Scan artwork QR codes to verify provenance and ownership, browse your collection, and manage certificates of authenticity.
+A mobile-centric collector registry web application built with Next.js.
 
-## Run
+## Getting Started
 
+### Prerequisites
+
+- Node.js 18+ 
+- npm or yarn
+
+### Installation
+
+1. Install dependencies:
 ```bash
 npm install
+```
+
+2. Create a `.env.local` file in the root directory:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+3. Run the development server:
+```bash
 npm run dev
 ```
 
-## Build
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-```bash
-npm run build
+## Project Structure
+
 ```
-
-## Setup
-
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Configure Supabase:**
-   - Create a `.env` file in the root directory
-   - Add your Supabase credentials:
-     ```
-     VITE_SUPABASE_URL=your_supabase_project_url
-     VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-     ```
-   - Get these values from your [Supabase Dashboard](https://app.supabase.com) → Project Settings → API
-
-3. **Run the app:**
-   ```bash
-   npm run dev
-   ```
-
-## Stack
-
-- **React 18** + **TypeScript**
-- **Vite**
-- **Tailwind CSS**
-- **lucide-react** (icons)
-- **Supabase** (authentication)
+├── app/                    # Next.js App Router
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Main app page
+│   └── globals.css        # Global styles
+├── components/            # React components
+│   ├── Header.tsx
+│   ├── Navigation.tsx
+│   ├── StatusBar.tsx
+│   ├── ScanningModal.tsx
+│   └── pages/            # Page components
+├── lib/                  # Utilities
+│   └── supabase.ts      # Supabase client
+└── public/              # Static assets
+```
 
 ## Features
 
-- **Gallery** – Verification hub, collection stats, recent scans
-- **Archive** – Scan history (tab wired, content same as Gallery for now)
-- **Guide** – Support (tab wired)
-- **Profile** – Settings (tab wired)
-- **QR scan** – FAB and card trigger a mock scanning modal with animated frame
+- Mobile-first responsive design
+- Authentication with Supabase
+- QR Code, PiCode, and NFC scanning interfaces
+- User profile management
+- Artwork registry and collection management
+
+## Tech Stack
+
+- **Next.js 14** - React framework with App Router
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **Supabase** - Authentication and backend
+- **Lucide React** - Icons
+
+## Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm start` - Start production server
+- `npm run lint` - Run ESLint
+
+## Environment Variables
+
+Make sure to set the following environment variables in your `.env.local`:
+
+- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key

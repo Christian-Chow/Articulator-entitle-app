@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes scan-line {
+  0% { top: 10%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 90%; opacity: 0; }
+}
+.animate-scan-line {
+  animation: scan-line 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.modal-fade-in { animation: fadeIn 0.3s ease-out; }
+.gateway-enter { animation: fadeIn 0.5s ease-out; }
+.home-enter { animation: fadeIn 0.4s ease-out; }
+.auth-enter { animation: fadeIn 0.5s ease-out; }

@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react';
 import { ChevronRight, Cpu, QrCode, Scan, ShieldCheck } from 'lucide-react';
 
