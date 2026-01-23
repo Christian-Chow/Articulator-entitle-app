@@ -1,5 +1,8 @@
+'use client'
+
 import React, { useState } from 'react';
 import { AtSign, Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 type LoginPageProps = {
   onSuccess: () => void;
@@ -13,27 +16,102 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [eulaAccepted, setEulaAccepted] = useState(false);
   const [confirmError, setConfirmError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setMessage(null);
     setConfirmError(false);
+    setLoading(true);
 
-    if (authMode === 'signup') {
-      const form = e.target as HTMLFormElement;
-      const p = (form.elements.namedItem('password') as HTMLInputElement)?.value ?? '';
-      const cp = (form.elements.namedItem('confirmPassword') as HTMLInputElement)?.value ?? '';
-      if (p !== cp) {
-        setConfirmError(true);
-        return;
+    const form = e.target as HTMLFormElement;
+    const email = (form.elements.namedItem('email') as HTMLInputElement)?.value ?? '';
+    const password = (form.elements.namedItem('password') as HTMLInputElement)?.value ?? '';
+
+    try {
+      if (authMode === 'signup') {
+        const confirmPassword = (form.elements.namedItem('confirmPassword') as HTMLInputElement)?.value ?? '';
+        if (password !== confirmPassword) {
+          setConfirmError(true);
+          setLoading(false);
+          return;
+        }
+
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              username: (form.elements.namedItem('username') as HTMLInputElement)?.value ?? '',
+              full_name: (form.elements.namedItem('fullName') as HTMLInputElement)?.value ?? '',
+            },
+          },
+        });
+
+        if (signUpError) throw signUpError;
+
+        if (data.user && !data.session) {
+          setMessage('Please check your email to confirm your account.');
+        } else if (data.session) {
+          onSuccess();
+        }
+      } else {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) throw signInError;
+
+        if (data.session) {
+          onSuccess();
+        }
       }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+    setLoading(true);
+
+    const form = e.target as HTMLFormElement;
+    const email = (form.elements.namedItem('email') as HTMLInputElement)?.value ?? '';
+
+    if (!email) {
+      setError('Please enter your email address.');
+      setLoading(false);
+      return;
     }
 
-    onSuccess();
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+
+      if (resetError) throw resetError;
+
+      setMessage('Password reset email sent! Please check your inbox.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send password reset email.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const switchMode = (next: 'login' | 'signup') => {
     setAuthMode(next);
     setConfirmError(false);
+    setError(null);
+    setMessage(null);
     if (next === 'login') setEulaAccepted(false);
   };
 
@@ -47,13 +125,25 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         />
       </div>
       <div className="mb-8">
-        <h3 className="font-serif text-2xl italic text-slate-800 mb-2">
+        <h3 className="font-serif text-2xl text-slate-800 mb-2">
           {authMode === 'signup' ? 'Create Account' : 'Login to Articulator'}
         </h3>
         <p className="text-xs text-slate-400 leading-relaxed uppercase tracking-widest font-medium">
           {authMode === 'signup' ? 'Join Articulator' : 'Sign in to access your collection'}
         </p>
       </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+          <p className="text-[11px] text-red-600 font-medium">{error}</p>
+        </div>
+      )}
+
+      {message && (
+        <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+          <p className="text-[11px] text-slate-700 font-medium">{message}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {authMode === 'signup' && (
@@ -100,6 +190,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
             placeholder="Password"
             className={inputClass}
             required
+            minLength={6}
           />
           <button
             type="button"
@@ -119,6 +210,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
               placeholder="Confirm Password"
               className={`${inputClass.replace('pr-12', 'pr-4')} ${confirmError ? 'border-red-200 focus:ring-red-100' : ''}`}
               required
+              minLength={6}
             />
             {confirmError && (
               <p className="mt-1.5 text-[10px] text-red-500 font-medium">Passwords do not match</p>
@@ -147,12 +239,24 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
         <button
           type="submit"
-          disabled={authMode === 'signup' && !eulaAccepted}
+          disabled={(authMode === 'signup' && !eulaAccepted) || loading}
           className="w-full bg-slate-900 text-white rounded-2xl py-4 font-bold uppercase tracking-widest text-[11px] shadow-xl shadow-slate-200 active:scale-95 transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
-          {authMode === 'signup' ? 'Get Started' : 'Sign In'}
+          {loading ? 'Processing...' : authMode === 'signup' ? 'Get Started' : 'Sign In'}
         </button>
       </form>
+
+      {authMode === 'login' && (
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={handlePasswordReset}
+            className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"
+          >
+            Forgot Password?
+          </button>
+        </div>
+      )}
 
       <div className="mt-12 text-center border-t border-slate-100 pt-8">
         <button
