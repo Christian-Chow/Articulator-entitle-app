@@ -22,16 +22,17 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy application source
 COPY . .
 
-# Set environment variables to skip linting and type checking
-ENV SKIP_LINT=true
-ENV NEXT_IGNORE_TYPE_ERRORS=true
+# Disable telemetry, linting, and type checking during build (Next.js env vars)
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+ENV NEXT_DISABLE_ESLINT=1
+ENV NEXT_DISABLE_TYPECHECK=1
 
 # Set build arguments as environment variables (required for Next.js build)
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 # Build the application
-# Note: NEXT_IGNORE_TYPE_ERRORS allows build to continue even with TypeScript errors
 RUN npm run build
 
 # Stage 3: Runner
