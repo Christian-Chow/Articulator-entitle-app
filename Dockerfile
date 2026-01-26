@@ -12,6 +12,10 @@ RUN npm ci
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Accept build arguments for environment variables
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
@@ -21,6 +25,10 @@ COPY . .
 # Set environment variables to skip linting and type checking
 ENV SKIP_LINT=true
 ENV NEXT_IGNORE_TYPE_ERRORS=true
+
+# Set build arguments as environment variables (required for Next.js build)
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 # Build the application
 # Note: NEXT_IGNORE_TYPE_ERRORS allows build to continue even with TypeScript errors
