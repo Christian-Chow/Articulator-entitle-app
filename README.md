@@ -51,7 +51,7 @@ npm run dev
 
 - Mobile-first responsive design
 - Authentication with Supabase
-- QR Code, PiCode, and NFC scanning interfaces
+- QR Code and NFC scanning interfaces
 - User profile management
 - Artwork registry and collection management
 

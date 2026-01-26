@@ -7,7 +7,6 @@ import Header from '@/components/Header';
 import Navigation, { type View } from '@/components/Navigation';
 import StatusBar from '@/components/StatusBar';
 import ScanningModal from '@/components/ScanningModal';
-import PiCodeScanner from '@/components/PiCodeScanner';
 import HomePage from '@/components/pages/HomePage';
 import LoginPage from '@/components/pages/LoginPage';
 import PlaceholderPage from '@/components/pages/PlaceholderPage';
@@ -65,23 +64,11 @@ const App = () => {
     setActiveScanType(type);
     setIsScanning(true);
     
-    // For PiCode, use the actual scanner component
-    // For other types, use the mock scanning modal
-    if (type !== 'PiCode') {
-      setTimeout(() => {
-        setIsScanning(false);
-        setView('home');
-      }, 2500);
-    }
-  };
-
-  const handlePiCodeSuccess = (decodedMessage: string) => {
-    setIsScanning(false);
-    // Handle the decoded message - you can navigate to artwork page or show result
-    console.log('Decoded PiCode:', decodedMessage);
-    // For now, navigate to home after successful scan
-    setView('home');
-    // TODO: Navigate to artwork detail page using decodedMessage
+    // Use the mock scanning modal for all scan types
+    setTimeout(() => {
+      setIsScanning(false);
+      setView('home');
+    }, 2500);
   };
 
   const headerSubtitle = 
@@ -127,19 +114,11 @@ const App = () => {
         {view === 'profile' && <ProfilePage user={user} onLogout={handleLogout} />}
       </main>
 
-      {activeScanType === 'PiCode' ? (
-        <PiCodeScanner
-          isScanning={isScanning}
-          onCancel={() => setIsScanning(false)}
-          onSuccess={handlePiCodeSuccess}
-        />
-      ) : (
-        <ScanningModal
-          isScanning={isScanning}
-          activeScanType={activeScanType}
-          onCancel={() => setIsScanning(false)}
-        />
-      )}
+      <ScanningModal
+        isScanning={isScanning}
+        activeScanType={activeScanType}
+        onCancel={() => setIsScanning(false)}
+      />
 
       {view !== 'auth' && <Navigation currentView={view} onNavigate={setView} />}
     </div>
