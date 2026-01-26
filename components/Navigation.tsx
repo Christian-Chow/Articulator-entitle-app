@@ -14,10 +14,10 @@ type NavigationProps = {
 const Navigation: React.FC<NavigationProps> = ({ currentView, onNavigate }) => (
   <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 px-6 py-3 flex justify-between items-center z-50">
     <button
-      onClick={() => onNavigate('home')}
-      className={`flex flex-col items-center gap-1 ${currentView === 'home' ? 'text-indigo-600' : 'text-slate-400'}`}
+      onClick={() => onNavigate('portal')}
+      className={`flex flex-col items-center gap-1 ${currentView === 'portal' ? 'text-indigo-600' : 'text-slate-400'}`}
     >
-      <Palette size={24} fill={currentView === 'home' ? 'currentColor' : 'none'} strokeWidth={1.5} />
+      <Palette size={24} fill={currentView === 'portal' ? 'currentColor' : 'none'} strokeWidth={1.5} />
       <span className="text-[10px] font-bold uppercase tracking-wider">Home</span>
     </button>
     <button
@@ -29,7 +29,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onNavigate }) => (
     </button>
     <div className="relative -top-8">
       <button
-        onClick={() => onNavigate('portal')}
+        onClick={() => {}}
         className="bg-slate-900 text-white p-4 rounded-full shadow-2xl shadow-slate-400 border-4 border-white active:scale-95 transition-transform"
       >
         <Scan size={32} />
