@@ -15,7 +15,13 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
 .modal-fade-in { animation: fadeIn 0.3s ease-out; }
+.animate-fade-in { animation: fadeIn 0.2s ease-out; }
+.animate-scale-in { animation: scaleIn 0.2s ease-out; }
 .gateway-enter { animation: fadeIn 0.5s ease-out; }
 .home-enter { animation: fadeIn 0.4s ease-out; }
 .auth-enter { animation: fadeIn 0.5s ease-out; }

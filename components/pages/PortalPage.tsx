@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useRef } from 'react';
-import { ChevronRight, Cpu, QrCode, Scan, ShieldCheck, Upload } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { ChevronRight, Cpu, Info, QrCode, Scan, ShieldCheck, Upload, X } from 'lucide-react';
 
 type PortalPageProps = {
   onScan: (type: string) => void;
@@ -10,6 +10,7 @@ type PortalPageProps = {
 
 const PortalPage: React.FC<PortalPageProps> = ({ onScan, onUploadImage }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -23,13 +24,44 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan, onUploadImage }) => {
   };
 
   return (
-    <div className="mt-4 gateway-enter">
-      <div className="mb-8 px-1">
-        <h3 className="font-serif text-xl text-slate-800 mb-2">Identify Artwork</h3>
-        <p className="text-xs text-slate-400 leading-relaxed uppercase tracking-tighter">
-          Choose a verification method to unlock the digital registry for your physical piece.
-        </p>
+    <div className="mt-0 gateway-enter">
+      <div className="px-1 flex items-center justify-end mb-1">
+        <button
+          onClick={() => setShowInfo(!showInfo)}
+          className="p-2 text-slate-400 hover:text-slate-600 transition-colors rounded-full hover:bg-slate-50"
+          aria-label="Show information"
+        >
+          <Info size={18} strokeWidth={1.5} />
+        </button>
       </div>
+
+      {showInfo && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/20 z-40 animate-fade-in"
+            onClick={() => setShowInfo(false)}
+          />
+          {/* Modal Popup */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
+            <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-sm w-full pointer-events-auto animate-scale-in">
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-lg text-slate-800">Identify Artwork</h3>
+                <button
+                  onClick={() => setShowInfo(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors rounded-full hover:bg-slate-50 -mt-1 -mr-1"
+                  aria-label="Close information"
+                >
+                  <X size={18} strokeWidth={1.5} />
+                </button>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed uppercase tracking-tighter">
+                Choose a verification method to unlock the digital registry for your physical piece.
+              </p>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="space-y-4">
       <button

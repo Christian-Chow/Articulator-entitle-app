@@ -23,7 +23,7 @@ const Header: React.FC<HeaderProps> = ({
   isAuthView = false,
   onBack,
 }) => (
-  <header className="px-6 pt-2 pb-6">
+  <header className="px-6 pt-2 pb-2">
     <div className="flex justify-between items-center mb-8">
       <div className="flex items-center gap-2 group cursor-pointer" onClick={onLogoClick}>
         <img
