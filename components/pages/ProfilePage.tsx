@@ -26,7 +26,7 @@ type ProfilePageProps = {
 type ProfileOption = {
   id: string;
   label: string;
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+  icon: typeof User;
   desc: string;
 };
 

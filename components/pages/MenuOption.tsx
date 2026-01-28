@@ -14,7 +14,7 @@ import {
   Wallet,
 } from 'lucide-react';
 
-type IconComponent = React.ComponentType<{ size?: number; strokeWidth?: number }>;
+type IconComponent = typeof Award;
 
 type MenuOption = {
   id: string;
