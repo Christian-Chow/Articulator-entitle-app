@@ -94,7 +94,7 @@ RUN mkdir -p backend/public backend/uploads && \
     chown -R nextjs:nodejs backend/public backend/uploads
 
 # Create a startup script to run both servers
-RUN echo '#!/bin/sh\n\
+RUN printf '#!/bin/sh\n\
 \n\
 # Function to handle shutdown\n\
 cleanup() {\n\
