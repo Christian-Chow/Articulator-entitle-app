@@ -1,22 +1,37 @@
 'use client'
 
-import React from 'react';
-import { ChevronRight, Cpu, QrCode, Scan, ShieldCheck } from 'lucide-react';
+import React, { useRef } from 'react';
+import { ChevronRight, Cpu, QrCode, Scan, ShieldCheck, Upload } from 'lucide-react';
 
 type PortalPageProps = {
   onScan: (type: string) => void;
+  onUploadImage: (file: File) => void;
 };
 
-const PortalPage: React.FC<PortalPageProps> = ({ onScan }) => (
-  <div className="mt-4 gateway-enter">
-    <div className="mb-8 px-1">
-      <h3 className="font-serif text-xl text-slate-800 mb-2">Identify Artwork</h3>
-      <p className="text-xs text-slate-400 leading-relaxed uppercase tracking-tighter">
-        Choose a verification method to unlock the digital registry for your physical piece.
-      </p>
-    </div>
+const PortalPage: React.FC<PortalPageProps> = ({ onScan, onUploadImage }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    <div className="space-y-4">
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      onUploadImage(file);
+    }
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="mt-4 gateway-enter">
+      <div className="mb-8 px-1">
+        <h3 className="font-serif text-xl text-slate-800 mb-2">Identify Artwork</h3>
+        <p className="text-xs text-slate-400 leading-relaxed uppercase tracking-tighter">
+          Choose a verification method to unlock the digital registry for your physical piece.
+        </p>
+      </div>
+
+      <div className="space-y-4">
       <button
         onClick={() => onScan('PiCode')}
         className="w-full bg-white border border-slate-100 rounded-[2.5rem] p-6 text-slate-900 shadow-sm flex items-center gap-6 group active:scale-[0.98] transition-all relative overflow-hidden text-left"
@@ -58,15 +73,37 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan }) => (
         </div>
         <ChevronRight size={20} className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
       </button>
+
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        className="w-full bg-white border border-slate-100 rounded-[2.5rem] p-6 text-slate-900 shadow-sm flex items-center gap-6 group active:scale-[0.98] transition-all relative overflow-hidden text-left"
+      >
+        <div className="bg-purple-50 text-purple-600 p-4 rounded-3xl group-hover:scale-110 transition-transform shrink-0">
+          <Upload size={32} strokeWidth={1.5} />
+        </div>
+        <div className="flex-1">
+          <h4 className="text-lg font-serif">Upload Image</h4>
+          <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mt-0.5">Decode from File</p>
+        </div>
+        <ChevronRight size={20} className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
     </div>
 
-    <div className="mt-12 text-center">
-      <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
-        <ShieldCheck size={12} />
-        Secured by Articulator Intelligence
-      </p>
+      <div className="mt-12 text-center">
+        <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
+          <ShieldCheck size={12} />
+          Secured by Articulator Intelligence
+        </p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default PortalPage;
