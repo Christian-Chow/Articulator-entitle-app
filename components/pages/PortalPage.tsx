@@ -46,7 +46,7 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan, onUploadImage }) => {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
             <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-sm w-full pointer-events-auto animate-scale-in">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-lg text-slate-800">Identify Artwork</h3>
+                <h3 className="text-xl font-medium text-black">Identify Artwork</h3>
                 <button
                   onClick={() => setShowInfo(false)}
                   className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors rounded-full hover:bg-slate-50 -mt-1 -mr-1"
@@ -55,7 +55,7 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan, onUploadImage }) => {
                   <X size={18} strokeWidth={1.5} />
                 </button>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed uppercase tracking-tighter">
+              <p className="text-sm text-slate-500 leading-relaxed">
                 Choose a verification method to unlock the digital registry for your physical piece.
               </p>
             </div>
@@ -72,8 +72,8 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan, onUploadImage }) => {
           <QrCode size={32} strokeWidth={1.5} className="text-white" />
         </div>
         <div className="flex-1">
-          <h4 className="text-lg font-serif">Scan PiCode</h4>
-          <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mt-0.5">Primary Visual ID</p>
+          <h4 className="text-xl font-medium text-black">Scan PiCode</h4>
+          <p className="text-sm text-slate-500 mt-0.5">Primary Visual ID</p>
         </div>
         <ChevronRight size={20} className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
       </button>
@@ -86,8 +86,8 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan, onUploadImage }) => {
           <Scan size={32} strokeWidth={1.5} />
         </div>
         <div className="flex-1">
-          <h4 className="text-lg font-serif">Scan QR Code</h4>
-          <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mt-0.5">Universal Tracking</p>
+          <h4 className="text-xl font-medium text-black">Scan QR Code</h4>
+          <p className="text-sm text-slate-500 mt-0.5">Universal Tracking</p>
         </div>
         <ChevronRight size={20} className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
       </button>
@@ -100,8 +100,8 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan, onUploadImage }) => {
           <Cpu size={32} strokeWidth={1.5} />
         </div>
         <div className="flex-1">
-          <h4 className="text-lg font-serif">NFC Registry</h4>
-          <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mt-0.5">Tap Interaction</p>
+          <h4 className="text-xl font-medium text-black">NFC Registry</h4>
+          <p className="text-sm text-slate-500 mt-0.5">Tap Interaction</p>
         </div>
         <ChevronRight size={20} className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
       </button>
@@ -114,8 +114,8 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan, onUploadImage }) => {
           <Upload size={32} strokeWidth={1.5} />
         </div>
         <div className="flex-1">
-          <h4 className="text-lg font-serif">Upload Image</h4>
-          <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mt-0.5">Decode from File</p>
+          <h4 className="text-xl font-medium text-black">Upload Image</h4>
+          <p className="text-sm text-slate-500 mt-0.5">Decode from File</p>
         </div>
         <ChevronRight size={20} className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
       </button>
@@ -129,7 +129,7 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan, onUploadImage }) => {
     </div>
 
       <div className="mt-12 text-center">
-        <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center justify-center gap-2">
+        <p className="text-sm text-slate-400 flex items-center justify-center gap-2">
           <ShieldCheck size={12} />
           Secured by Articulator Intelligence
         </p>
