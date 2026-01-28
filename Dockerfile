@@ -24,7 +24,6 @@ RUN apk add --no-cache \
 # Copy backend source
 COPY backend/package.json backend/package-lock.json* ./backend/
 COPY backend/server.js ./backend/
-COPY backend/nodemon.json ./backend/ 2>/dev/null || true
 COPY backend/cpp_src ./backend/cpp_src
 
 WORKDIR /app/backend
