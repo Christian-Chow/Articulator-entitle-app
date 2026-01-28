@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import Header from '@/components/Header';
 import StatusBar from '@/components/StatusBar';
 import { getArtworkWatermarkedPublicUrl } from '@/lib/urls';
-import ArtworkVariants from './ArtworkVariants';
+import MenuOption from '@/components/pages/MenuOption';
 
 type Artwork = {
   id: string;
@@ -24,6 +24,7 @@ export default function ArtworkDetailPage() {
   const [artwork, setArtwork] = useState<Artwork | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     if (!artworkId) return;
@@ -32,17 +33,27 @@ export default function ArtworkDetailPage() {
       setLoading(true);
       setError(null);
       try {
-        const { data, error } = await supabase
-          .from('artworks')
-          .select('*')
-          .eq('id', artworkId)
-          .single();
+        // Fetch auth session and artwork in parallel
+        const [{ data: sessionData }, { data: artworkData, error: artworkError }] = await Promise.all([
+          supabase.auth.getSession(),
+          supabase
+            .from('artworks')
+            .select('*')
+            .eq('id', artworkId)
+            .single(),
+        ]);
 
-        if (error) {
-          throw error;
+        if (sessionData.session) {
+          setIsLoggedIn(true);
+        } else {
+          setIsLoggedIn(false);
         }
 
-        setArtwork(data as Artwork);
+        if (artworkError) {
+          throw artworkError;
+        }
+
+        setArtwork(artworkData as Artwork);
       } catch (err: any) {
         console.error('Error loading artwork', err);
         setError('Unable to load artwork details. Please try again later.');
@@ -65,7 +76,7 @@ export default function ArtworkDetailPage() {
       <Header
         subtitle="Artwork Detail"
         title={artwork?.title || 'Artwork'}
-        isLoggedIn={false}
+        isLoggedIn={isLoggedIn}
         onLoginToggle={() => {}}
         onLogoClick={() => router.push('/')}
         isAuthView={false}
@@ -117,8 +128,10 @@ export default function ArtworkDetailPage() {
               </div>
             </section>
 
-            {/* Artwork Variants Section */}
-            <ArtworkVariants artworkId={artworkId} />
+            {/* Artwork Tools Menu */}
+            <div className="pt-4">
+              <MenuOption isLoggedIn={isLoggedIn} />
+            </div>
           </div>
         )}
 

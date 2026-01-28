@@ -8,7 +8,7 @@ import Header from '@/components/Header';
 import Navigation, { type View } from '@/components/Navigation';
 import StatusBar from '@/components/StatusBar';
 import ScanningModal from '@/components/ScanningModal';
-import HomePage from '@/components/pages/HomePage';
+import MenuOption from '@/components/pages/MenuOption';
 import LoginPage from '@/components/pages/LoginPage';
 import PlaceholderPage from '@/components/pages/PlaceholderPage';
 import PortalPage from '@/components/pages/PortalPage';
@@ -238,7 +238,7 @@ const App = () => {
 
       <main className="px-6">
         {view === 'portal' && <PortalPage onScan={triggerScan} onUploadImage={handleImageUpload} />}
-        {view === 'home' && <HomePage isLoggedIn={isLoggedIn} />}
+        {view === 'home' && <MenuOption isLoggedIn={isLoggedIn} />}
         {view === 'auth' && <LoginPage onSuccess={() => {}} />}
         {view === 'archive' && <PlaceholderPage label="Archive" />}
         {view === 'guide' && <PlaceholderPage label="Guide" />}
