@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import Header from '@/components/Header';
@@ -13,8 +14,10 @@ import PlaceholderPage from '@/components/pages/PlaceholderPage';
 import PortalPage from '@/components/pages/PortalPage';
 import ProfilePage from '@/components/pages/ProfilePage';
 import { decodeImage } from '@/lib/api';
+import { extractArtworkId } from '@/lib/utils';
 
 const App = () => {
+  const router = useRouter();
   const [view, setView] = useState<View>('auth');
   const [isScanning, setIsScanning] = useState(false);
   const [activeScanType, setActiveScanType] = useState('');
@@ -147,11 +150,17 @@ const App = () => {
       if (result.error) {
         setDecodeError(result.error + (result.details ? `: ${result.details}` : ''));
       } else if (result.decodedMessage) {
-        setDecodeResult(result.decodedMessage);
-        // Optionally navigate to home or show success
-        setTimeout(() => {
-          setView('home');
-        }, 2000);
+        const artworkId = extractArtworkId(result.decodedMessage);
+        if (artworkId) {
+          setDecodeResult(`Found artwork: ${artworkId}`);
+          // Navigate to artwork page
+          setTimeout(() => {
+            router.push(`/artworks/${artworkId}`);
+          }, 1000);
+        } else {
+          setDecodeResult(result.decodedMessage);
+          setDecodeError('Could not extract artwork ID from decoded message');
+        }
       }
     } catch (error) {
       setDecodeError(error instanceof Error ? error.message : 'Failed to decode image');
@@ -171,12 +180,19 @@ const App = () => {
         setDecodeError(result.error + (result.details ? `: ${result.details}` : ''));
         setIsScanning(false);
       } else if (result.decodedMessage) {
-        setDecodeResult(result.decodedMessage);
-        setIsScanning(false);
-        // Optionally navigate to home or show success
-        setTimeout(() => {
-          setView('home');
-        }, 2000);
+        const artworkId = extractArtworkId(result.decodedMessage);
+        if (artworkId) {
+          setDecodeResult(`Found artwork: ${artworkId}`);
+          setIsScanning(false);
+          // Navigate to artwork page
+          setTimeout(() => {
+            router.push(`/artworks/${artworkId}`);
+          }, 1000);
+        } else {
+          setDecodeResult(result.decodedMessage);
+          setDecodeError('Could not extract artwork ID from decoded message');
+          setIsScanning(false);
+        }
       }
     } catch (error) {
       setDecodeError(error instanceof Error ? error.message : 'Failed to decode image');

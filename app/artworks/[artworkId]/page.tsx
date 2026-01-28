@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import Header from '@/components/Header';
 import StatusBar from '@/components/StatusBar';
 import { getArtworkWatermarkedPublicUrl } from '@/lib/urls';
+import ArtworkVariants from './ArtworkVariants';
 
 type Artwork = {
   id: string;
@@ -115,6 +116,9 @@ export default function ArtworkDetailPage() {
                 </p>
               </div>
             </section>
+
+            {/* Artwork Variants Section */}
+            <ArtworkVariants artworkId={artworkId} />
           </div>
         )}
 
