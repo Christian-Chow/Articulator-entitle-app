@@ -95,7 +95,6 @@ RUN mkdir -p backend/public backend/uploads && \
 
 # Create a startup script to run both servers
 RUN echo '#!/bin/sh\n\
-set -e\n\
 \n\
 # Function to handle shutdown\n\
 cleanup() {\n\
@@ -107,12 +106,33 @@ cleanup() {\n\
 trap cleanup SIGTERM SIGINT\n\
 \n\
 # Start backend server in background\n\
-cd /app/backend\n\
+echo "Starting backend server on port 3001..."\n\
+cd /app/backend || { echo "ERROR: Cannot cd to /app/backend"; exit 1; }\n\
+if [ ! -f server.js ]; then\n\
+  echo "ERROR: Backend server.js not found in /app/backend!"\n\
+  exit 1\n\
+fi\n\
 node server.js &\n\
 BACKEND_PID=$!\n\
+echo "Backend server started with PID: $BACKEND_PID"\n\
+\n\
+# Give backend a moment to start\n\
+sleep 2\n\
+\n\
+# Check if backend is still running\n\
+if ! kill -0 $BACKEND_PID 2>/dev/null; then\n\
+  echo "ERROR: Backend server failed to start!"\n\
+  exit 1\n\
+fi\n\
 \n\
 # Start frontend server in foreground\n\
-cd /app\n\
+echo "Starting frontend server on port 8080..."\n\
+cd /app || { echo "ERROR: Cannot cd to /app"; kill $BACKEND_PID 2>/dev/null || true; exit 1; }\n\
+if [ ! -f server.js ]; then\n\
+  echo "ERROR: Frontend server.js not found in /app!"\n\
+  kill $BACKEND_PID 2>/dev/null || true\n\
+  exit 1\n\
+fi\n\
 exec node server.js\n\
 ' > /app/start.sh && \
     chmod +x /app/start.sh && \
