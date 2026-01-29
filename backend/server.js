@@ -193,6 +193,81 @@ app.get('/debug/decoder', (req, res) => {
     });
 });
 
+// Test endpoint - test decoder with an uploaded file (for debugging)
+app.post('/debug/test-decoder', upload.single('image'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'Image file is required' });
+    }
+
+    const imagePath = path.resolve(req.file.path);
+    const decoderPath = path.resolve(__dirname, 'decoder');
+    const requestId = req.requestId || 'test-' + Date.now();
+
+    console.log(`[${requestId}] Testing decoder with file: ${imagePath}`);
+
+    // Run decoder with extended timeout for testing
+    const testProcess = spawn(decoderPath, [imagePath], {
+        stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    let output = '';
+    let errorOutput = '';
+    const startTime = Date.now();
+
+    testProcess.stdout.on('data', (data) => {
+        output += data.toString();
+    });
+
+    testProcess.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+    });
+
+    testProcess.on('error', (err) => {
+        console.error(`[${requestId}] Process spawn error:`, err);
+        fs.unlink(imagePath, () => {});
+        res.status(500).json({
+            error: 'Failed to start decoder',
+            details: err.message,
+            requestId
+        });
+    });
+
+    // Extended timeout for testing (30 seconds)
+    const killTimer = setTimeout(() => {
+        try {
+            testProcess.kill('SIGKILL');
+            console.log(`[${requestId}] Process killed after timeout`);
+        } catch (e) {}
+    }, 30000);
+
+    testProcess.on('exit', (code, signal) => {
+        console.log(`[${requestId}] Process exit event - code: ${code}, signal: ${signal}`);
+    });
+
+    testProcess.on('close', (code, signal) => {
+        clearTimeout(killTimer);
+        const duration = Date.now() - startTime;
+        
+        fs.unlink(imagePath, () => {});
+
+        const result = {
+            requestId,
+            duration: `${duration}ms`,
+            exitCode: code,
+            signal: signal,
+            stdout: output.trim(),
+            stderr: errorOutput.trim(),
+            decoderPath,
+            imagePath,
+            fileSize: req.file.size,
+            mimeType: req.file.mimetype
+        };
+
+        console.log(`[${requestId}] Test completed:`, JSON.stringify(result, null, 2));
+        res.json(result);
+    });
+});
+
 app.post('/api/encode', upload.single('logo'), (req, res) => {
     const { message, moduleSize, dimension, quality } = req.body;
     if (!req.file) {
@@ -294,23 +369,38 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
     console.log(`[${requestId}]   Request from: ${req.headers['user-agent'] || 'unknown'}`);
     console.log(`[${requestId}]   Origin: ${req.headers.origin || req.headers.referer || 'unknown'}`);
 
-    const process = spawn(decoderPath, [imagePath]);
+    // Spawn decoder process with explicit stdio handling
+    const process = spawn(decoderPath, [imagePath], {
+        stdio: ['ignore', 'pipe', 'pipe'], // stdin: ignore, stdout/stderr: pipe
+        detached: false
+    });
 
-    // Kill process if it runs over 8 seconds
+    // Kill process if it runs over 15 seconds (increased from 8)
     const killTimer = setTimeout(() => {
-        try { process.kill('SIGKILL'); } catch (e) {}
-    }, 8000);
+        if (!isResponseSent) {
+            console.log(`[${requestId}] Process timeout - killing decoder`);
+            try { 
+                process.kill('SIGKILL'); 
+            } catch (e) {
+                console.error(`[${requestId}] Error killing process:`, e);
+            }
+        }
+    }, 15000);
 
     let output = '';
     let errorOutput = '';
     let isResponseSent = false;
 
     process.stdout.on('data', (data) => {
-        output += data.toString();
+        const chunk = data.toString();
+        output += chunk;
+        console.log(`[${requestId}] Decoder stdout chunk:`, chunk.substring(0, 100));
     });
     
     process.stderr.on('data', (data) => {
-        errorOutput += data.toString();
+        const chunk = data.toString();
+        errorOutput += chunk;
+        console.log(`[${requestId}] Decoder stderr chunk:`, chunk.substring(0, 200));
     });
 
     process.on('error', (err) => {
@@ -385,7 +475,16 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
                 error: 'Failed to decode image.', 
                 details: (errorTrimmed && !errorTrimmed.includes('WARNING: The convert command is deprecated')) 
                     ? errorTrimmed 
-                    : errorMsg
+                    : errorMsg,
+                requestId: requestId,
+                debug: {
+                    exitCode: code,
+                    signal: signal,
+                    hasStdout: outputTrimmed.length > 0,
+                    hasStderr: errorTrimmed.length > 0,
+                    stderrPreview: errorTrimmed.substring(0, 500),
+                    stdoutPreview: outputTrimmed.substring(0, 500)
+                }
             });
         }
     });

@@ -116,6 +116,25 @@ All requests now include:
 - Request ID in response headers: `X-Request-ID`
 - Detailed process information (PID, paths, exit codes)
 
+### 3. Test Decoder Endpoint
+**POST** `http://your-backend-url:3001/debug/test-decoder`
+
+Tests the decoder with an uploaded file and returns detailed information including:
+- Process exit code and signal
+- stdout and stderr output
+- Execution duration
+- File information
+
+**Example:**
+```bash
+curl -X POST \
+  http://43.99.51.105:3001/debug/test-decoder \
+  -F "image=@test-image.png" \
+  | jq
+```
+
+This endpoint has a 30-second timeout (vs 15 seconds for production) to help debug slow operations.
+
 ## Testing Locally vs Production
 
 ### Local Development
