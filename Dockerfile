@@ -75,10 +75,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Install runtime dependencies for C++ binaries
+# ImageMagick is needed by CImg library for image format recognition
 RUN apk add --no-cache \
     libpng \
     libjpeg-turbo \
-    musl
+    musl \
+    imagemagick \
+    imagemagick
 
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs && \

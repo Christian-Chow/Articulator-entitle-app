@@ -3,8 +3,8 @@
 # Compiler and flags
 CXX = g++
 CC = gcc
-CFLAGS = -O2 -Dcimg_display=0 -I/opt/homebrew/include -Wno-deprecated-register
-CXXFLAGS = -std=c++11 -O2 -Dcimg_display=0 -I/opt/homebrew/include -Wno-deprecated-register
+CFLAGS = -O2 -Dcimg_display=0 -Dcimg_use_png -Dcimg_use_jpeg -I/opt/homebrew/include -Wno-deprecated-register
+CXXFLAGS = -std=c++11 -O2 -Dcimg_display=0 -Dcimg_use_png -Dcimg_use_jpeg -I/opt/homebrew/include -Wno-deprecated-register
 LDFLAGS = -L/opt/homebrew/lib -lpng -ljpeg -lpthread
 
 # Directories

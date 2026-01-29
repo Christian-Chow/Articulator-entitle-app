@@ -69,6 +69,16 @@ Look for log entries with the request ID:
 [<request-id>] Decoder process exited with code ...
 ```
 
+## Root Cause Found: ImageMagick Missing
+
+**The Issue:** CImg library tries to use ImageMagick (`convert` command) first, and when it's not found, it fails to fall back to built-in PNG/JPEG support properly.
+
+**The Fix:**
+1. Install ImageMagick in the Docker container (runtime dependency)
+2. Enable PNG/JPEG support in CImg compilation (build-time)
+
+**Status:** Fixed in Dockerfile and Makefile
+
 ## Common Issues
 
 ### Issue: Decoder binary not found
