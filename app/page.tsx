@@ -6,13 +6,13 @@ import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import Header from '@/components/Header';
 import Navigation, { type View } from '@/components/Navigation';
-import StatusBar from '@/components/StatusBar';
 import ScanningModal from '@/components/ScanningModal';
 import MenuOption from '@/components/pages/MenuOption';
 import LoginPage from '@/components/pages/LoginPage';
 import PlaceholderPage from '@/components/pages/PlaceholderPage';
 import PortalPage from '@/components/pages/PortalPage';
 import ProfilePage from '@/components/pages/ProfilePage';
+import ForgotPasswordPage from '@/components/pages/ForgotPasswordPage';
 import { decodeImage } from '@/lib/api';
 import { extractArtworkId } from '@/lib/utils';
 
@@ -134,7 +134,6 @@ const App = () => {
     if (type !== 'PiCode') {
       setTimeout(() => {
         setIsScanning(false);
-        setView('home');
       }, 2500);
     }
   };
@@ -218,8 +217,6 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] pb-32 font-sans text-slate-900 overflow-x-hidden">
-      <StatusBar />
-
       <Header
         subtitle={headerSubtitle}
         title={headerTitle}
@@ -232,14 +229,21 @@ const App = () => {
           }
         }}
         onLogoClick={() => setView('portal')}
-        isAuthView={view === 'auth'}
-        onBack={() => setView('portal')}
+        isAuthView={view === 'auth' || view === 'forgot-password'}
+        onBack={() => {
+          if (view === 'forgot-password') {
+            setView('auth');
+          } else {
+            setView('portal');
+          }
+        }}
       />
 
       <main className="px-6">
         {view === 'portal' && <PortalPage onScan={triggerScan} onUploadImage={handleImageUpload} />}
         {view === 'home' && <MenuOption isLoggedIn={isLoggedIn} />}
-        {view === 'auth' && <LoginPage onSuccess={() => {}} />}
+        {view === 'auth' && <LoginPage onSuccess={() => {}} onForgotPassword={() => setView('forgot-password')} />}
+        {view === 'forgot-password' && <ForgotPasswordPage onBack={() => setView('auth')} />}
         {view === 'archive' && <PlaceholderPage label="Archive" />}
         {view === 'guide' && <PlaceholderPage label="Guide" />}
         {view === 'profile' && <ProfilePage user={user} onLogout={handleLogout} />}
