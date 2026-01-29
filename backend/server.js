@@ -24,8 +24,8 @@ const storage = multer.diskStorage({
         cb(null, uploadsDir);
     },
     filename: (req, file, cb) => {
-        // Keep original filename but ensure it's safe - just prefix with timestamp
-        // Only sanitize if there are problematic characters
+        // Keep original filename but ensure it's safe - prefix with timestamp and random ID
+        // This prevents conflicts if multiple deployments share the backend
         let sanitizedName = file.originalname;
         // Only sanitize if filename contains characters that might cause issues
         if (/[^a-zA-Z0-9._-]/.test(file.originalname)) {
@@ -33,7 +33,9 @@ const storage = multer.diskStorage({
             const nameWithoutExt = path.basename(file.originalname, ext);
             sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9.-]/g, '_') + ext;
         }
-        cb(null, Date.now() + '-' + sanitizedName);
+        // Add random ID to prevent conflicts between deployments
+        const randomId = Math.random().toString(36).substr(2, 9);
+        cb(null, `${Date.now()}-${randomId}-${sanitizedName}`);
     }
 });
 
@@ -65,6 +67,131 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use('/public', express.static(publicDir));
+
+// Add request ID middleware for tracking (must be before routes)
+app.use((req, res, next) => {
+    req.requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    res.setHeader('X-Request-ID', req.requestId);
+    next();
+});
+
+// Enhanced logging middleware
+app.use((req, res, next) => {
+    const start = Date.now();
+    const originalEnd = res.end;
+    
+    res.end = function(...args) {
+        const duration = Date.now() - start;
+        console.log(`[${req.requestId}] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+        originalEnd.apply(this, args);
+    };
+    
+    next();
+});
+
+// Health check endpoint (before other routes for quick access)
+app.get('/health', (req, res) => {
+    const decoderPath = path.resolve(__dirname, 'decoder');
+    const encoderPath = path.resolve(__dirname, 'encoder');
+    
+    const health = {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: {
+            nodeVersion: process.version,
+            platform: process.platform,
+            arch: process.arch,
+            hostname: process.env.HOSTNAME || 'unknown',
+            port: port,
+            uploadsDir: uploadsDir,
+            publicDir: publicDir,
+            __dirname: __dirname
+        },
+        binaries: {
+            decoder: {
+                path: decoderPath,
+                exists: fs.existsSync(decoderPath),
+                executable: fs.existsSync(decoderPath) ? (() => {
+                    try {
+                        fs.accessSync(decoderPath, fs.constants.X_OK);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })() : false
+            },
+            encoder: {
+                path: encoderPath,
+                exists: fs.existsSync(encoderPath),
+                executable: fs.existsSync(encoderPath) ? (() => {
+                    try {
+                        fs.accessSync(encoderPath, fs.constants.X_OK);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })() : false
+            }
+        },
+        directories: {
+            uploads: {
+                path: uploadsDir,
+                exists: fs.existsSync(uploadsDir),
+                writable: fs.existsSync(uploadsDir) ? (() => {
+                    try {
+                        fs.accessSync(uploadsDir, fs.constants.W_OK);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })() : false
+            },
+            public: {
+                path: publicDir,
+                exists: fs.existsSync(publicDir),
+                writable: fs.existsSync(publicDir) ? (() => {
+                    try {
+                        fs.accessSync(publicDir, fs.constants.W_OK);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })() : false
+            }
+        }
+    };
+    
+    res.json(health);
+});
+
+// Debug endpoint - check decoder binary status
+app.get('/debug/decoder', (req, res) => {
+    const decoderPath = path.resolve(__dirname, 'decoder');
+    
+    if (!fs.existsSync(decoderPath)) {
+        return res.status(500).json({ 
+            error: 'Decoder binary not found',
+            path: decoderPath
+        });
+    }
+    
+    // Check if executable
+    try {
+        fs.accessSync(decoderPath, fs.constants.X_OK);
+    } catch (err) {
+        return res.status(500).json({
+            error: 'Decoder binary is not executable',
+            path: decoderPath,
+            details: err.message
+        });
+    }
+    
+    res.json({
+        status: 'decoder_binary_ok',
+        path: decoderPath,
+        executable: true
+    });
+});
 
 app.post('/api/encode', upload.single('logo'), (req, res) => {
     const { message, moduleSize, dimension, quality } = req.body;
@@ -122,11 +249,13 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
     const imagePath = path.resolve(req.file.path); // Use absolute path
     const decoderPath = path.resolve(__dirname, 'decoder'); // Use absolute path
 
+    const requestId = req.requestId || 'unknown';
+    
     // Validate decoder binary exists and is executable
     if (!fs.existsSync(decoderPath)) {
-        console.error(`Decoder binary not found at: ${decoderPath}`);
+        console.error(`[${requestId}] Decoder binary not found at: ${decoderPath}`);
         fs.unlink(imagePath, () => {});
-        return res.status(500).json({ error: 'Decoder binary not found', details: `Path: ${decoderPath}` });
+        return res.status(500).json({ error: 'Decoder binary not found', details: `Path: ${decoderPath}`, requestId });
     }
 
     // Check file exists and get stats
@@ -134,31 +263,36 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
     try {
         fileStats = fs.statSync(imagePath);
         if (fileStats.size === 0) {
-            console.error(`Uploaded file is empty: ${imagePath}`);
+            const requestId = req.requestId || 'unknown';
+            console.error(`[${requestId}] Uploaded file is empty: ${imagePath}`);
             fs.unlink(imagePath, () => {});
-            return res.status(400).json({ error: 'Uploaded file is empty' });
+            return res.status(400).json({ error: 'Uploaded file is empty', requestId });
         }
     } catch (err) {
-        console.error(`Cannot access uploaded file: ${imagePath}`, err);
+        const requestId = req.requestId || 'unknown';
+        console.error(`[${requestId}] Cannot access uploaded file: ${imagePath}`, err);
         fs.unlink(imagePath, () => {});
-        return res.status(500).json({ error: 'Cannot access uploaded file', details: err.message });
+        return res.status(500).json({ error: 'Cannot access uploaded file', details: err.message, requestId });
     }
 
     // Check file permissions
     try {
         fs.accessSync(imagePath, fs.constants.R_OK);
     } catch (err) {
-        console.error(`Cannot read uploaded file: ${imagePath}`, err);
+        const requestId = req.requestId || 'unknown';
+        console.error(`[${requestId}] Cannot read uploaded file: ${imagePath}`, err);
         fs.unlink(imagePath, () => {});
-        return res.status(500).json({ error: 'Cannot read uploaded file', details: err.message });
+        return res.status(500).json({ error: 'Cannot read uploaded file', details: err.message, requestId });
     }
 
-    // Log file details for debugging
-    console.log(`Decoding image: ${imagePath}`);
-    console.log(`  File size: ${fileStats.size} bytes`);
-    console.log(`  MIME type: ${req.file.mimetype}`);
-    console.log(`  Original name: ${req.file.originalname}`);
-    console.log(`  Using decoder: ${decoderPath}`);
+    // Log file details for debugging with request ID
+    console.log(`[${requestId}] Decoding image: ${imagePath}`);
+    console.log(`[${requestId}]   File size: ${fileStats.size} bytes`);
+    console.log(`[${requestId}]   MIME type: ${req.file.mimetype}`);
+    console.log(`[${requestId}]   Original name: ${req.file.originalname}`);
+    console.log(`[${requestId}]   Using decoder: ${decoderPath}`);
+    console.log(`[${requestId}]   Request from: ${req.headers['user-agent'] || 'unknown'}`);
+    console.log(`[${requestId}]   Origin: ${req.headers.origin || req.headers.referer || 'unknown'}`);
 
     const process = spawn(decoderPath, [imagePath]);
 
@@ -183,17 +317,25 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
         clearTimeout(killTimer);
         if(isResponseSent) return;
         isResponseSent = true;
-        console.error(`Failed to start decoder process:`, err);
+        console.error(`[${requestId}] Failed to start decoder process:`, err);
+        console.error(`[${requestId}]   Error details:`, {
+            message: err.message,
+            code: err.code,
+            syscall: err.syscall,
+            path: decoderPath,
+            imagePath: imagePath
+        });
         fs.unlink(imagePath, () => {});
         res.status(500).json({ 
             error: 'Failed to start decoder process', 
-            details: err.message || 'Unknown error' 
+            details: err.message || 'Unknown error',
+            requestId: requestId
         });
     });
 
     // Also listen for exit event to catch immediate crashes
     process.on('exit', (code, signal) => {
-        console.log(`Decoder process exit event - code: ${code}, signal: ${signal}`);
+        console.log(`[${requestId}] Decoder process exit event - code: ${code}, signal: ${signal}`);
     });
 
     process.on('close', (code, signal) => {
@@ -206,9 +348,12 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
         const outputTrimmed = output.trim();
         const errorTrimmed = errorOutput.trim();
         
-        console.log(`Decoder process exited with code ${code}, signal: ${signal}`);
-        console.log(`  stdout: "${outputTrimmed}"`);
-        console.log(`  stderr: "${errorTrimmed}"`);
+        console.log(`[${requestId}] Decoder process exited with code ${code}, signal: ${signal}`);
+        console.log(`[${requestId}]   stdout: "${outputTrimmed}"`);
+        console.log(`[${requestId}]   stderr: "${errorTrimmed}"`);
+        console.log(`[${requestId}]   Process PID: ${process.pid}`);
+        console.log(`[${requestId}]   Image path: ${imagePath}`);
+        console.log(`[${requestId}]   Decoder path: ${decoderPath}`);
 
         // Handle case where process was killed (code is null) but we have output
         // Also handle normal exit (code === 0)
@@ -218,7 +363,7 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
             if (decodedMessage.includes('Failed to process image file') || 
                 decodedMessage.includes('Can not detect or decode') ||
                 decodedMessage.includes('An unknown error occurred')) {
-                console.error(`Decoder returned error message: ${decodedMessage}`);
+                console.error(`[${requestId}] Decoder returned error message: ${decodedMessage}`);
                 res.status(500).json({ 
                     error: 'Failed to decode image.', 
                     details: decodedMessage 
@@ -228,10 +373,10 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
             }
         } else {
             // Process failed or was killed without output
-            console.error(`Decoder failed - exit code: ${code}, signal: ${signal}`);
+            console.error(`[${requestId}] Decoder failed - exit code: ${code}, signal: ${signal}`);
             if (errorTrimmed && !errorTrimmed.includes('WARNING: The convert command is deprecated')) {
                 // Only treat non-ImageMagick warnings as real errors
-                console.error(`  stderr: ${errorTrimmed}`);
+                console.error(`[${requestId}]   stderr: ${errorTrimmed}`);
             }
             const errorMsg = code === null 
                 ? `Process was killed${signal ? ` by signal ${signal}` : ''}`
@@ -261,7 +406,139 @@ app.use((err, req, res, next) => {
     next();
 });
 
+// Health check endpoint (before other routes for quick access)
+app.get('/health', (req, res) => {
+    const decoderPath = path.resolve(__dirname, 'decoder');
+    const encoderPath = path.resolve(__dirname, 'encoder');
+    
+    const health = {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: {
+            nodeVersion: process.version,
+            platform: process.platform,
+            arch: process.arch,
+            hostname: process.env.HOSTNAME || 'unknown',
+            port: port,
+            uploadsDir: uploadsDir,
+            publicDir: publicDir,
+            __dirname: __dirname
+        },
+        binaries: {
+            decoder: {
+                path: decoderPath,
+                exists: fs.existsSync(decoderPath),
+                executable: fs.existsSync(decoderPath) ? (() => {
+                    try {
+                        fs.accessSync(decoderPath, fs.constants.X_OK);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })() : false
+            },
+            encoder: {
+                path: encoderPath,
+                exists: fs.existsSync(encoderPath),
+                executable: fs.existsSync(encoderPath) ? (() => {
+                    try {
+                        fs.accessSync(encoderPath, fs.constants.X_OK);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })() : false
+            }
+        },
+        directories: {
+            uploads: {
+                path: uploadsDir,
+                exists: fs.existsSync(uploadsDir),
+                writable: fs.existsSync(uploadsDir) ? (() => {
+                    try {
+                        fs.accessSync(uploadsDir, fs.constants.W_OK);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })() : false
+            },
+            public: {
+                path: publicDir,
+                exists: fs.existsSync(publicDir),
+                writable: fs.existsSync(publicDir) ? (() => {
+                    try {
+                        fs.accessSync(publicDir, fs.constants.W_OK);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })() : false
+            }
+        }
+    };
+    
+    res.json(health);
+});
+
+// Debug endpoint - check decoder binary status
+app.get('/debug/decoder', (req, res) => {
+    const decoderPath = path.resolve(__dirname, 'decoder');
+    
+    if (!fs.existsSync(decoderPath)) {
+        return res.status(500).json({ 
+            error: 'Decoder binary not found',
+            path: decoderPath
+        });
+    }
+    
+    // Check if executable
+    try {
+        fs.accessSync(decoderPath, fs.constants.X_OK);
+    } catch (err) {
+        return res.status(500).json({
+            error: 'Decoder binary is not executable',
+            path: decoderPath,
+            details: err.message
+        });
+    }
+    
+    res.json({
+        status: 'decoder_binary_ok',
+        path: decoderPath,
+        executable: true
+    });
+});
+
+// Add request ID middleware for tracking
+app.use((req, res, next) => {
+    req.requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    res.setHeader('X-Request-ID', req.requestId);
+    next();
+});
+
+// Enhanced logging middleware
+app.use((req, res, next) => {
+    const start = Date.now();
+    const originalEnd = res.end;
+    
+    res.end = function(...args) {
+        const duration = Date.now() - start;
+        console.log(`[${req.requestId}] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+        originalEnd.apply(this, args);
+    };
+    
+    next();
+});
+
 const host = process.env.HOSTNAME || '0.0.0.0';
 app.listen(port, host, () => {
     console.log(`Server is running on http://${host}:${port}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Platform: ${process.platform} ${process.arch}`);
+    console.log(`Node version: ${process.version}`);
+    console.log(`Uploads directory: ${uploadsDir}`);
+    console.log(`Public directory: ${publicDir}`);
+    console.log(`Decoder path: ${path.resolve(__dirname, 'decoder')}`);
+    console.log(`Encoder path: ${path.resolve(__dirname, 'encoder')}`);
 }); 
