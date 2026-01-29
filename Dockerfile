@@ -36,7 +36,8 @@ WORKDIR /app/backend/cpp_src
 RUN sed -i 's|-I/opt/homebrew/include||g' Makefile && \
     sed -i 's|-L/opt/homebrew/lib||g' Makefile && \
     make clean && \
-    make
+    make && \
+    chmod +x ../decoder ../encoder
 
 # Stage 3: Frontend Builder
 FROM node:20-alpine AS frontend-builder
@@ -90,6 +91,9 @@ COPY --from=frontend-builder --chown=nextjs:nodejs /app/.next/static ./.next/sta
 
 # Copy backend files
 COPY --from=backend-builder --chown=nextjs:nodejs /app/backend ./backend
+
+# Ensure decoder and encoder binaries are executable
+RUN chmod +x backend/decoder backend/encoder || true
 
 # Create directories for backend
 RUN mkdir -p backend/public backend/uploads && \

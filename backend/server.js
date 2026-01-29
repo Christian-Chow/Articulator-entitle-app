@@ -92,9 +92,26 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
         return res.status(400).json({ error: 'Image file is required' });
     }
 
-    const imagePath = req.file.path;
-    const decoderPath = path.join(__dirname, 'decoder');
+    const imagePath = path.resolve(req.file.path); // Use absolute path
+    const decoderPath = path.resolve(__dirname, 'decoder'); // Use absolute path
 
+    // Validate decoder binary exists and is executable
+    if (!fs.existsSync(decoderPath)) {
+        console.error(`Decoder binary not found at: ${decoderPath}`);
+        fs.unlink(imagePath, () => {});
+        return res.status(500).json({ error: 'Decoder binary not found', details: `Path: ${decoderPath}` });
+    }
+
+    // Check file permissions
+    try {
+        fs.accessSync(imagePath, fs.constants.R_OK);
+    } catch (err) {
+        console.error(`Cannot read uploaded file: ${imagePath}`, err);
+        fs.unlink(imagePath, () => {});
+        return res.status(500).json({ error: 'Cannot read uploaded file', details: err.message });
+    }
+
+    console.log(`Decoding image: ${imagePath} using decoder: ${decoderPath}`);
     const process = spawn(decoderPath, [imagePath]);
 
     // Kill process if it runs over 8 seconds
@@ -114,6 +131,18 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
         errorOutput += data.toString();
     });
 
+    process.on('error', (err) => {
+        clearTimeout(killTimer);
+        if(isResponseSent) return;
+        isResponseSent = true;
+        console.error(`Failed to start decoder process:`, err);
+        fs.unlink(imagePath, () => {});
+        res.status(500).json({ 
+            error: 'Failed to start decoder process', 
+            details: err.message || 'Unknown error' 
+        });
+    });
+
     process.on('close', (code) => {
         clearTimeout(killTimer);
         if(isResponseSent) return;
@@ -121,11 +150,26 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
 
         fs.unlink(imagePath, () => {}); // Clean up uploaded file
 
+        console.log(`Decoder process exited with code ${code}, output: "${output.trim()}", stderr: "${errorOutput.trim()}"`);
+
         if (code === 0 && output) {
-            res.json({ decodedMessage: output.trim() });
+            const decodedMessage = output.trim();
+            // Check if the output is an error message from the decoder
+            if (decodedMessage.includes('Failed to process image file') || 
+                decodedMessage.includes('Can not detect or decode')) {
+                res.status(500).json({ 
+                    error: 'Failed to decode image.', 
+                    details: decodedMessage 
+                });
+            } else {
+                res.json({ decodedMessage });
+            }
         } else {
-            console.error(`Decoder stderr: ${errorOutput}`);
-            res.status(500).json({ error: 'Failed to decode image.', details: errorOutput.trim() });
+            console.error(`Decoder failed - exit code: ${code}, stderr: ${errorOutput}`);
+            res.status(500).json({ 
+                error: 'Failed to decode image.', 
+                details: errorOutput.trim() || `Process exited with code ${code}` 
+            });
         }
     });
 });
