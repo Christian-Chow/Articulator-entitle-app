@@ -1,5 +1,5 @@
-# Stage 1: Dependencies
-FROM node:20-alpine AS deps
+# Stage 1: Frontend Dependencies
+FROM node:20-alpine AS frontend-deps
 WORKDIR /app
 
 # Copy package files
@@ -8,16 +8,47 @@ COPY package.json package-lock.json* ./
 # Install dependencies
 RUN npm ci
 
-# Stage 2: Builder
-FROM node:20-alpine AS builder
+# Stage 2: Backend Builder (for C++ compilation)
+FROM node:20-alpine AS backend-builder
+WORKDIR /app
+
+# Install build dependencies for C++ compilation
+RUN apk add --no-cache \
+    g++ \
+    gcc \
+    make \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    musl-dev
+
+# Copy backend source
+COPY backend/package.json backend/package-lock.json* ./backend/
+COPY backend/server.js ./backend/
+COPY backend/cpp_src ./backend/cpp_src
+
+WORKDIR /app/backend
+
+# Install backend Node.js dependencies
+RUN npm ci --production
+
+# Build C++ binaries (override Makefile paths for Alpine Linux)
+WORKDIR /app/backend/cpp_src
+RUN sed -i 's|-I/opt/homebrew/include||g' Makefile && \
+    sed -i 's|-L/opt/homebrew/lib||g' Makefile && \
+    make clean && \
+    make
+
+# Stage 3: Frontend Builder
+FROM node:20-alpine AS frontend-builder
 WORKDIR /app
 
 # Accept build arguments for environment variables
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_BACKEND_URL
 
 # Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=frontend-deps /app/node_modules ./node_modules
 
 # Copy application source
 COPY . .
@@ -31,30 +62,89 @@ ENV NEXT_DISABLE_TYPECHECK=1
 # Set build arguments as environment variables (required for Next.js build)
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 
 # Build the application
 RUN npm run build
 
-# Stage 3: Runner
+# Stage 4: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Install runtime dependencies for C++ binaries
+RUN apk add --no-cache \
+    libpng \
+    libjpeg-turbo \
+    musl
+
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy necessary files from builder
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Copy frontend files from builder
+COPY --from=frontend-builder /app/public ./public
+COPY --from=frontend-builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=frontend-builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy backend files
+COPY --from=backend-builder --chown=nextjs:nodejs /app/backend ./backend
+
+# Create directories for backend
+RUN mkdir -p backend/public backend/uploads && \
+    chown -R nextjs:nodejs backend/public backend/uploads
+
+# Create a startup script to run both servers
+RUN printf '#!/bin/sh\n\
+\n\
+# Function to handle shutdown\n\
+cleanup() {\n\
+  echo "Shutting down..."\n\
+  kill $BACKEND_PID 2>/dev/null || true\n\
+  exit\n\
+}\n\
+\n\
+trap cleanup SIGTERM SIGINT\n\
+\n\
+# Start backend server in background\n\
+echo "Starting backend server on port 3001..."\n\
+cd /app/backend || { echo "ERROR: Cannot cd to /app/backend"; exit 1; }\n\
+if [ ! -f server.js ]; then\n\
+  echo "ERROR: Backend server.js not found in /app/backend!"\n\
+  exit 1\n\
+fi\n\
+node server.js &\n\
+BACKEND_PID=$!\n\
+echo "Backend server started with PID: $BACKEND_PID"\n\
+\n\
+# Give backend a moment to start\n\
+sleep 2\n\
+\n\
+# Check if backend is still running\n\
+if ! kill -0 $BACKEND_PID 2>/dev/null; then\n\
+  echo "ERROR: Backend server failed to start!"\n\
+  exit 1\n\
+fi\n\
+\n\
+# Start frontend server in foreground\n\
+echo "Starting frontend server on port 8080..."\n\
+cd /app || { echo "ERROR: Cannot cd to /app"; kill $BACKEND_PID 2>/dev/null || true; exit 1; }\n\
+if [ ! -f server.js ]; then\n\
+  echo "ERROR: Frontend server.js not found in /app!"\n\
+  kill $BACKEND_PID 2>/dev/null || true\n\
+  exit 1\n\
+fi\n\
+exec node server.js\n\
+' > /app/start.sh && \
+    chmod +x /app/start.sh && \
+    chown nextjs:nodejs /app/start.sh
 
 USER nextjs
 
-EXPOSE 8080
+EXPOSE 8080 3001
 
 ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["/bin/sh", "/app/start.sh"]

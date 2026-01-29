@@ -29,7 +29,13 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-app.use(cors());
+// CORS configuration - allow all origins for flexibility
+app.use(cors({
+  origin: true, // Allow all origins
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use('/public', express.static(publicDir));
 
@@ -124,6 +130,7 @@ app.post('/api/decode', upload.single('image'), (req, res) => {
     });
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+const host = process.env.HOSTNAME || '0.0.0.0';
+app.listen(port, host, () => {
+    console.log(`Server is running on http://${host}:${port}`);
 }); 
