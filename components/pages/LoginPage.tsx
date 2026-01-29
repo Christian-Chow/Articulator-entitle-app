@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { AtSign, Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -91,13 +90,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onForgotPassword }) =>
   return (
     <div className="mt-2 auth-enter">
       <div className="w-full rounded-2xl overflow-hidden mb-6 shadow-sm border border-slate-100">
-        <Image
+        <img
           src="/auth_banner-min.png"
           alt=""
-          width={1200}
-          height={160}
-          priority
-          quality={85}
           className="w-full h-40 object-cover object-center"
         />
       </div>
