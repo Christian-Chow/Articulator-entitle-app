@@ -27,7 +27,7 @@ const Header: React.FC<HeaderProps> = ({
     <div className="flex justify-between items-center mb-4">
       <div className="flex items-center gap-2 group cursor-pointer" onClick={onLogoClick}>
         <img
-          src="/logo.png"
+          src="/logo.svg"
           alt="Articulators"
           className="h-20 w-auto object-contain group-hover:opacity-80 transition-opacity duration-300"
         />
