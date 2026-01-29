@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -52,9 +53,13 @@ const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onBack }) => {
       </button>
 
       <div className="w-full rounded-2xl overflow-hidden mb-6 shadow-sm border border-slate-100">
-        <img
+        <Image
           src="/auth_banner-min.png"
           alt=""
+          width={1200}
+          height={160}
+          priority
+          quality={85}
           className="w-full h-40 object-cover object-center"
         />
       </div>
