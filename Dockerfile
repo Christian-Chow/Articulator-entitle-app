@@ -36,7 +36,8 @@ WORKDIR /app/backend/cpp_src
 RUN sed -i 's|-I/opt/homebrew/include||g' Makefile && \
     sed -i 's|-L/opt/homebrew/lib||g' Makefile && \
     make clean && \
-    make
+    make && \
+    chmod +x ../decoder ../encoder
 
 # Stage 3: Frontend Builder
 FROM node:20-alpine AS frontend-builder
@@ -74,10 +75,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Install runtime dependencies for C++ binaries
+# ImageMagick is needed by CImg library for image format recognition
 RUN apk add --no-cache \
     libpng \
     libjpeg-turbo \
-    musl
+    musl \
+    imagemagick \
+    imagemagick
 
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs && \
@@ -90,6 +94,9 @@ COPY --from=frontend-builder --chown=nextjs:nodejs /app/.next/static ./.next/sta
 
 # Copy backend files
 COPY --from=backend-builder --chown=nextjs:nodejs /app/backend ./backend
+
+# Ensure decoder and encoder binaries are executable
+RUN chmod +x backend/decoder backend/encoder || true
 
 # Create directories for backend
 RUN mkdir -p backend/public backend/uploads && \
