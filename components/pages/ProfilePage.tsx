@@ -115,13 +115,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onLogout }) => {
             </button>
           </div>
 
-          <h3 className="text-2xl font-serif text-slate-800 mb-6">{displayName}</h3>
+          <h3 className="text-2xl font-medium text-slate-800 mb-6">{displayName}</h3>
           
           {accountType && (
             <div className="w-full border-t border-slate-50 pt-6">
               <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest mb-1">Account Type</p>
               <div className="flex items-center justify-center gap-2">
-                <p className="text-lg font-serif text-indigo-600">
+                <p className="text-lg font-medium text-indigo-600">
                   {accountType.toLowerCase() === 'artist' ? 'Artist' : accountType.charAt(0).toUpperCase() + accountType.slice(1).toLowerCase()}
                 </p>
                 {accountType.toLowerCase() === 'artist' && (
@@ -151,7 +151,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onLogout }) => {
                     <Icon size={20} strokeWidth={1.5} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="block text-xs font-bold text-slate-800 tracking-wide uppercase mb-0.5">{item.label}</span>
+                    <span className="block text-xs font-medium text-slate-800 tracking-wide uppercase mb-0.5">{item.label}</span>
                     <p className="text-[10px] text-slate-400 font-medium truncate">{item.desc}</p>
                   </div>
                   <ChevronRight size={16} className="text-slate-200 group-hover:text-slate-400 transition-colors" />
@@ -166,7 +166,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onLogout }) => {
       {user && (
         <button
           onClick={onLogout}
-          className="w-full mt-4 bg-rose-50 text-rose-600 py-5 rounded-[2.2rem] text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-100 transition-colors"
+          className="w-full mt-4 bg-rose-50 text-rose-600 py-5 rounded-[2.2rem] text-xs font-medium uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-100 transition-colors"
         >
           <LogOut size={16} />
           Sign Out from Registry

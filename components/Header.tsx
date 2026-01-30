@@ -24,14 +24,13 @@ const Header: React.FC<HeaderProps> = ({
   onBack,
 }) => (
   <header className="px-6 pt-2 pb-2">
-    <div className="flex justify-between items-center mb-8">
+    <div className="flex justify-between items-center mb-4">
       <div className="flex items-center gap-2 group cursor-pointer" onClick={onLogoClick}>
         <img
-          src="/logo.png"
+          src="/logo.svg"
           alt="Articulators"
-          className="h-9 w-auto object-contain group-hover:opacity-80 transition-opacity duration-300"
+          className="h-20 w-auto object-contain group-hover:opacity-80 transition-opacity duration-300"
         />
-        <span className="text-[8px] uppercase tracking-[0.3em] text-slate-400 leading-none">Registry</span>
       </div>
 
       <div className="flex items-center gap-3">
@@ -72,8 +71,8 @@ const Header: React.FC<HeaderProps> = ({
 
     {!isAuthView && (
       <div className="mb-0">
-        <h2 className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.25em] mb-1">{subtitle}</h2>
-        <h1 className="text-3xl font-serif font-light text-slate-800 leading-tight">{title}</h1>
+        <h2 className="text-slate-500 text-sm mb-1">{subtitle}</h2>
+        <h1 className="text-3xl font-medium text-black leading-tight">{title}</h1>
       </div>
     )}
   </header>

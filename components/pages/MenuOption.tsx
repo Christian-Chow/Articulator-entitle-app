@@ -44,7 +44,7 @@ const MenuOption: React.FC<MenuOptionProps> = ({ isLoggedIn }) => (
   <div className="home-enter">
     <section>
       <div className="flex items-end justify-between mb-5 px-1">
-        <h3 className="font-serif text-xl text-slate-800">Explore Services</h3>
+        <h3 className="font-medium text-xl text-slate-800">Explore Services</h3>
         <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Registry v2.4</span>
       </div>
 
@@ -60,7 +60,7 @@ const MenuOption: React.FC<MenuOptionProps> = ({ isLoggedIn }) => (
                 <Icon size={24} strokeWidth={1.5} />
               </div>
               <div className="flex-1 min-w-0">
-                <span className="block text-xs font-bold text-slate-800 tracking-wide uppercase mb-0.5">{opt.label}</span>
+                <span className="block text-xs font-medium text-slate-800 tracking-wide uppercase mb-0.5">{opt.label}</span>
                 <p className="text-[10px] text-slate-400 font-medium truncate">{opt.desc}</p>
               </div>
               <ChevronRight size={16} className="text-slate-200 group-hover:text-slate-400 transition-colors" />

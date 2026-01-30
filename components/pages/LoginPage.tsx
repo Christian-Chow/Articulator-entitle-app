@@ -6,12 +6,13 @@ import { supabase } from '@/lib/supabase';
 
 type LoginPageProps = {
   onSuccess: () => void;
+  onForgotPassword?: () => void;
 };
 
 const inputClass =
   'w-full bg-white border border-slate-100 rounded-2xl py-4 pl-12 pr-12 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-100 shadow-sm transition-all';
 
-const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onForgotPassword }) => {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [eulaAccepted, setEulaAccepted] = useState(false);
@@ -77,35 +78,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     }
   };
 
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setMessage(null);
-    setLoading(true);
-
-    const form = e.target as HTMLFormElement;
-    const email = (form.elements.namedItem('email') as HTMLInputElement)?.value ?? '';
-
-    if (!email) {
-      setError('Please enter your email address.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      });
-
-      if (resetError) throw resetError;
-
-      setMessage('Password reset email sent! Please check your inbox.');
-    } catch (err: any) {
-      setError(err.message || 'Failed to send password reset email.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const switchMode = (next: 'login' | 'signup') => {
     setAuthMode(next);
@@ -125,7 +97,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         />
       </div>
       <div className="mb-8">
-        <h3 className="font-serif text-2xl text-slate-800 mb-2">
+        <h3 className="font-medium text-2xl text-slate-800 mb-2">
           {authMode === 'signup' ? 'Create Account' : 'Login to Articulator'}
         </h3>
         <p className="text-xs text-slate-400 leading-relaxed uppercase tracking-widest font-medium">
@@ -250,8 +222,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         <div className="mt-4 text-center">
           <button
             type="button"
-            onClick={handlePasswordReset}
-            className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"
+            onClick={() => onForgotPassword?.()}
+            className="text-[10px] font-medium text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"
           >
             Forgot Password?
           </button>

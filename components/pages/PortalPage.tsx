@@ -100,7 +100,7 @@ const PortalPage: React.FC<PortalPageProps> = ({ onScan, onUploadImage }) => {
           <Cpu size={32} strokeWidth={1.5} />
         </div>
         <div className="flex-1">
-          <h4 className="text-xl font-medium text-black">NFC Registry</h4>
+          <h4 className="text-xl font-medium text-black">NFC</h4>
           <p className="text-sm text-slate-500 mt-0.5">Tap Interaction</p>
         </div>
         <ChevronRight size={20} className="text-slate-200 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />

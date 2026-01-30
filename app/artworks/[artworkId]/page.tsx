@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Header from '@/components/Header';
-import StatusBar from '@/components/StatusBar';
 import { getArtworkWatermarkedPublicUrl } from '@/lib/urls';
 import MenuOption from '@/components/pages/MenuOption';
 
@@ -71,8 +70,6 @@ export default function ArtworkDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] font-sans text-slate-900 overflow-x-hidden">
-      <StatusBar />
-
       <Header
         subtitle="Artwork Detail"
         title={artwork?.title || 'Artwork'}
