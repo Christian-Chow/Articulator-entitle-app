@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Cpu, QrCode, Camera } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Cpu, QrCode } from 'lucide-react';
+import { BACKEND_API_URL } from '@/lib/urls';
 
 type ScanningModalProps = {
   isScanning: boolean;
@@ -12,78 +13,303 @@ type ScanningModalProps = {
 
 const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanType, onCancel, onCapture }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const scanLoopId = useRef<number | null>(null);
+  const isScanningRef = useRef(false);
+  const inflightRef = useRef(false);
+  
   const [error, setError] = useState<string | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
+  const [isAutoScanning, setIsAutoScanning] = useState(false);
+  const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
+
+  // URL detection helper
+  const isUrl = (str: string): boolean => {
+    try {
+      new URL(str);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  // Stop auto-scanning
+  const stopAutoScan = useCallback(() => {
+    setIsAutoScanning(false);
+    isScanningRef.current = false;
+    if (scanLoopId.current !== null) {
+      cancelAnimationFrame(scanLoopId.current);
+      scanLoopId.current = null;
+    }
+    inflightRef.current = false;
+  }, []);
+
+  // Capture frame and decode
+  const captureAndDecode = useCallback((): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!videoRef.current || !canvasRef.current || videoRef.current.paused || videoRef.current.ended) {
+        return resolve();
+      }
+
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      
+      if (!context) {
+        return resolve();
+      }
+
+      const minSide = Math.min(video.videoWidth, video.videoHeight);
+      const side = minSide * 0.7; // 70% of smaller dimension
+      const sx = (video.videoWidth - side) / 2; // Center X
+      const sy = (video.videoHeight - side) / 2; // Center Y
+      
+      // Use higher resolution for capture, at least 800px or native crop size
+      const TARGET = Math.max(side, 800);
+
+      canvas.width = TARGET;
+      canvas.height = TARGET;
+
+      if (TARGET === 0) return resolve();
+
+      context.drawImage(video, sx, sy, side, side, 0, 0, TARGET, TARGET);
+
+      canvas.toBlob(async (blob) => {
+        if (blob && isScanningRef.current) {
+          const file = new File([blob], 'camera-capture.png', { type: 'image/png' });
+          const formData = new FormData();
+          formData.append('image', file);
+
+          try {
+            const response = await fetch(`${BACKEND_API_URL}/api/decode`, {
+              method: 'POST',
+              body: formData,
+            });
+            const data = await response.json();
+
+            // Handle successful decode
+            if (isScanningRef.current && 
+                response.ok && 
+                data.decodedMessage && 
+                !data.decodedMessage.includes('Can not detect')) {
+              
+              // Handle URL redirects
+              if (isUrl(data.decodedMessage)) {
+                stopAutoScan();
+                if (streamRef.current) {
+                  streamRef.current.getTracks().forEach(track => track.stop());
+                  streamRef.current = null;
+                }
+                window.location.href = data.decodedMessage;
+                return;
+              }
+
+              // Freeze frame before stopping camera
+              if (videoRef.current) {
+                try {
+                  const tempCanvas = document.createElement('canvas');
+                  tempCanvas.width = videoRef.current.videoWidth;
+                  tempCanvas.height = videoRef.current.videoHeight;
+                  const tempCtx = tempCanvas.getContext('2d');
+                  if (tempCtx) {
+                    tempCtx.drawImage(videoRef.current, 0, 0);
+                    setFrozenFrame(tempCanvas.toDataURL());
+                  }
+                } catch (e) {
+                  console.error('Failed to capture freeze frame:', e);
+                }
+              }
+              
+              // Stop scanning and call onCapture callback
+              stopAutoScan();
+              if (onCapture) {
+                onCapture(file);
+              }
+            }
+          } catch (err) {
+            // Non-critical error, just log it
+            console.error('Decode loop error:', err);
+          }
+        }
+        resolve();
+      }, 'image/png');
+    });
+  }, [onCapture, stopAutoScan]);
+
+  // Scanning loop
+  const scanLoop = useCallback(() => {
+    if (!isScanningRef.current) return;
+    
+    setTimeout(() => {
+      if (!inflightRef.current) {
+        inflightRef.current = true;
+        captureAndDecode().finally(() => {
+          inflightRef.current = false;
+          if (isScanningRef.current) {
+            scanLoopId.current = requestAnimationFrame(scanLoop);
+          }
+        });
+      } else {
+        if (isScanningRef.current) {
+          scanLoopId.current = requestAnimationFrame(scanLoop);
+        }
+      }
+    }, 100);
+  }, [captureAndDecode]);
+
+  // Start auto-scanning
+  const startAutoScan = useCallback(() => {
+    setIsAutoScanning(true);
+    isScanningRef.current = true;
+    scanLoopId.current = requestAnimationFrame(scanLoop);
+  }, [scanLoop]);
+
+  // Extract camera start logic into a reusable function
+  // This will always attempt to request camera permission, prompting the user every time
+  // Supports both mobile (back camera) and laptop/desktop (front/default camera)
+  const startCamera = useCallback(async () => {
+    // Reset state and cleanup
+    setFrozenFrame(null);
+    if (scanLoopId.current !== null) {
+      cancelAnimationFrame(scanLoopId.current);
+      scanLoopId.current = null;
+    }
+    setError(null);
+    setIsAutoScanning(false);
+    isScanningRef.current = false;
+    inflightRef.current = false;
+
+    try {
+      // Request camera access with exact constraints from spec
+      // Try back camera first (for mobile devices), fallback to front/default if needed
+      let mediaStream: MediaStream | null = null;
+      
+      try {
+        const constraints = { 
+          video: { 
+            facingMode: 'environment', // Back camera on mobile devices
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        };
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (envError: any) {
+        // If back camera fails (e.g., on laptop), try front/default camera
+        try {
+          const constraints = { 
+            video: { 
+              facingMode: 'user', // Front camera or default camera
+              width: { ideal: 1920 },
+              height: { ideal: 1080 }
+            }
+          };
+          mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (userError: any) {
+          // If that also fails, try without facingMode constraint (let browser choose)
+          const constraints = { 
+            video: { 
+              width: { ideal: 1920 },
+              height: { ideal: 1080 }
+            }
+          };
+          mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        }
+      }
+      
+      if (!mediaStream) {
+        throw new Error('Failed to access camera');
+      }
+      
+      // Try to enable continuous autofocus if supported
+      const track = mediaStream.getVideoTracks()[0];
+      const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+      const focusModes = (capabilities as any).focusMode;
+      if (focusModes && Array.isArray(focusModes) && focusModes.includes('continuous')) {
+        try {
+          await track.applyConstraints({ advanced: [{ focusMode: 'continuous' } as any] });
+        } catch (e) {
+          console.log('Could not apply continuous focus');
+        }
+      }
+
+      streamRef.current = mediaStream;
+      setError(null);
+      inflightRef.current = false;
+      
+      // Use setTimeout with 50ms delay before attaching stream
+      setTimeout(async () => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          try { 
+            await videoRef.current.play(); 
+          } catch (_) {}
+          
+          // Wait for video to be ready
+          const waitUntilReady = () => {
+            if (videoRef.current && 
+                videoRef.current.videoWidth > 0 && 
+                videoRef.current.videoHeight > 0) {
+              startAutoScan();
+            } else {
+              requestAnimationFrame(waitUntilReady);
+            }
+          };
+          waitUntilReady();
+        }
+      }, 50);
+    } catch (err: any) {
+      console.error('Camera error:', err);
+      
+      // Provide specific error messages based on error type
+      let errorMessage = 'Unable to access camera. ';
+      
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMessage += 'Camera permission was denied. Please allow camera access in your browser settings and try again.';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMessage += 'No camera found on this device.';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMessage += 'Camera is already in use by another application.';
+      } else {
+        errorMessage += 'Please check your browser settings and allow camera access.';
+      }
+      
+      setError(errorMessage);
+    }
+  }, [startAutoScan]);
 
   useEffect(() => {
     if (!isScanning) {
-      // Stop camera when modal closes
+      // Stop camera when modal closes and reset error state
+      stopAutoScan();
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      setError(null); // Reset error so it tries again next time
+      setFrozenFrame(null);
       return;
     }
 
     // Only start camera for PiCode scanning
-    if (activeScanType === 'PiCode' && videoRef.current) {
-      const startCamera = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { 
-              facingMode: 'environment', // Use back camera on mobile
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }
-          });
-          streamRef.current = stream;
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.play();
-          }
-          setError(null);
-        } catch (err) {
-          console.error('Error accessing camera:', err);
-          setError('Unable to access camera. Please check permissions.');
-        }
-      };
-
+    if (activeScanType === 'PiCode') {
       startCamera();
     }
 
     return () => {
       // Cleanup on unmount
+      stopAutoScan();
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
     };
-  }, [isScanning, activeScanType]);
-
-  const capturePhoto = () => {
-    if (!videoRef.current || !onCapture || isCapturing) return;
-
-    setIsCapturing(true);
-    const video = videoRef.current;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    
-    if (ctx) {
-      ctx.drawImage(video, 0, 0);
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const file = new File([blob], `capture-${Date.now()}.png`, { type: 'image/png' });
-          onCapture(file);
-        }
-        setIsCapturing(false);
-      }, 'image/png');
-    } else {
-      setIsCapturing(false);
-    }
-  };
+  }, [isScanning, activeScanType, startCamera, stopAutoScan]);
 
   if (!isScanning) return null;
 
@@ -93,13 +319,27 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
     <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center text-white p-8 modal-fade-in">
       <div className="w-72 h-72 border border-white/20 rounded-[3.5rem] relative overflow-hidden bg-white/5 backdrop-blur-sm">
         {showCamera ? (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <>
+            {frozenFrame ? (
+              <img 
+                src={frozenFrame} 
+                alt="Captured frame" 
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
+            {/* Overlay guide - centered square */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-48 h-48 border-2 border-white/40 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" />
+            </div>
+          </>
         ) : (
           <>
             <div className="absolute inset-x-8 top-0 h-1 bg-gradient-to-r from-transparent via-indigo-400 to-transparent shadow-[0_0_30px_rgba(129,140,248,0.5)] animate-scan-line" />
@@ -117,26 +357,49 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
           </>
         )}
       </div>
+      {/* Hidden canvas for frame capture */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      
       <div className="mt-16 text-center">
         <h2 className="text-2xl font-serif tracking-wide">
-          {error ? 'Camera Error' : activeScanType === 'NFC' ? 'Awaiting Tag...' : `Reading ${activeScanType}...`}
-        </h2>
-        <p className="mt-3 text-slate-400 text-[10px] uppercase tracking-[0.2em] font-medium max-w-[220px] mx-auto leading-relaxed">
           {error 
-            ? error
+            ? 'Camera Permission Required' 
+            : activeScanType === 'NFC' 
+            ? 'Awaiting Tag...' 
+            : isAutoScanning 
+            ? `Scanning ${activeScanType}...` 
+            : `Reading ${activeScanType}...`}
+        </h2>
+        <p className="mt-3 text-slate-400 text-[10px] uppercase tracking-[0.2em] font-medium max-w-[280px] mx-auto leading-relaxed">
+          {error 
+            ? (error.includes('denied') || error.includes('Permission'))
+              ? 'Please allow camera access in your browser settings, then try again.'
+              : error
             : activeScanType === 'NFC'
             ? 'Hold your device near the piece identifier'
-            : `Align the ${activeScanType} on the physical piece within the frame`}
+            : isAutoScanning
+            ? 'Align the PiCode within the frame'
+            : 'Initializing camera...'}
         </p>
       </div>
-      {showCamera && onCapture && (
+      {error && (
         <button
-          onClick={capturePhoto}
-          disabled={isCapturing}
-          className="mt-8 px-10 py-3 bg-indigo-600 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          onClick={() => {
+            // Stop any existing stream first
+            stopAutoScan();
+            if (streamRef.current) {
+              streamRef.current.getTracks().forEach(track => track.stop());
+              streamRef.current = null;
+            }
+            setError(null);
+            // Attempt camera access again
+            if (activeScanType === 'PiCode') {
+              startCamera();
+            }
+          }}
+          className="mt-6 px-8 py-2.5 bg-indigo-600 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors"
         >
-          <Camera size={16} />
-          {isCapturing ? 'Processing...' : 'Capture'}
+          Try Again
         </button>
       )}
       <button
