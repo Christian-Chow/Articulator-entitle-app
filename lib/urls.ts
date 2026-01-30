@@ -9,8 +9,9 @@ const getBackendUrl = () => {
       return process.env.NEXT_PUBLIC_BACKEND_URL;
     }
     // Use same hostname but port 3001
+    // Always use HTTPS if the page is served over HTTPS to avoid mixed content errors
     const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
     return `${protocol}//${hostname}:3001`;
   }
   // Server-side: use env variable or default to localhost
