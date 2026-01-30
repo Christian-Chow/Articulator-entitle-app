@@ -29,7 +29,7 @@ const Header: React.FC<HeaderProps> = ({
         <img
           src="/logo.svg"
           alt="Articulators"
-          className="h-20 w-auto object-contain group-hover:opacity-80 transition-opacity duration-300"
+          className="h-14 w-auto object-contain group-hover:opacity-80 transition-opacity duration-300"
         />
       </div>
 
@@ -72,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({
     {!isAuthView && (
       <div className="mb-0">
         <h2 className="text-slate-500 text-sm mb-1">{subtitle}</h2>
-        <h1 className="text-3xl font-medium text-black leading-tight">{title}</h1>
+        <h1 className="text-2xl font-medium text-black leading-tight">{title}</h1>
       </div>
     )}
   </header>

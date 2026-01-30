@@ -8,9 +8,20 @@ const getBackendUrl = () => {
     if (process.env.NEXT_PUBLIC_BACKEND_URL) {
       return process.env.NEXT_PUBLIC_BACKEND_URL;
     }
-    // Use same hostname but port 3001
+    
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
+    
+    // If served over HTTPS on a production domain (not localhost), use same origin
+    // This assumes reverse proxy routes /api/* to backend on port 3001
+    // This avoids SSL protocol errors when backend is HTTP-only
+    if (protocol === 'https:' && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      // Use same origin (no port) - reverse proxy should route /api/* to backend
+      // Never add port 3001 when on HTTPS production domain
+      return `${protocol}//${hostname}`;
+    }
+    
+    // For HTTP (development) or localhost, use port 3001
     return `${protocol}//${hostname}:3001`;
   }
   // Server-side: use env variable or default to localhost
