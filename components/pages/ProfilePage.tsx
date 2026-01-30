@@ -43,26 +43,85 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [cameraPermission, setCameraPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown' | 'checking'>('unknown');
   const [showCameraSettings, setShowCameraSettings] = useState(false);
+  const [lastKnownPermission, setLastKnownPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown' | null>(null);
   
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Guest';
 
   // Check camera permission status
-  const checkCameraPermission = useCallback(async (): Promise<'granted' | 'denied' | 'prompt' | 'unknown'> => {
+  // On mobile browsers, Permissions API is unreliable, so we use getUserMedia as source of truth
+  const checkCameraPermission = useCallback(async (skipPrompt = false): Promise<'granted' | 'denied' | 'prompt' | 'unknown'> => {
+    // Try Permissions API first (works on some browsers)
+    let permissionsApiState: 'granted' | 'denied' | 'prompt' | null = null;
     try {
       if (navigator.permissions && navigator.permissions.query) {
         try {
           const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
-          return result.state as 'granted' | 'denied' | 'prompt';
+          permissionsApiState = result.state as 'granted' | 'denied' | 'prompt';
         } catch (e) {
-          // Permissions API might not support 'camera' name in some browsers
-          console.log('Permission API query failed:', e);
+          // Permissions API not supported or failed
         }
       }
     } catch (e) {
-      console.log('Permission API not available:', e);
+      // Permissions API not available
     }
-    return 'unknown';
-  }, []);
+
+    // If we have a last known state and Permissions API conflicts, trust last known for denied
+    // This helps with mobile browsers where Permissions API is unreliable
+    if (lastKnownPermission === 'denied' && permissionsApiState === 'prompt') {
+      // Permissions API says prompt but we know it's denied - trust our knowledge
+      return 'denied';
+    }
+
+    // If Permissions API says granted, verify it
+    if (permissionsApiState === 'granted') {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(track => track.stop());
+        return 'granted';
+      } catch (err: any) {
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          return 'denied'; // Actually denied
+        }
+      }
+    }
+
+    // If Permissions API says denied, verify it (but trust it if confirmed)
+    if (permissionsApiState === 'denied') {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(track => track.stop());
+        return 'granted'; // Actually granted, API was wrong
+      } catch (err: any) {
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          return 'denied'; // Confirmed denied
+        }
+      }
+      return 'denied'; // Trust API if we can't verify
+    }
+
+    // If Permissions API says prompt or is unavailable
+    // On mobile, "prompt" often means "denied" - test with getUserMedia
+    // But if skipPrompt is true and we don't have lastKnownPermission, return prompt to avoid triggering
+    if (skipPrompt && permissionsApiState === 'prompt' && !lastKnownPermission) {
+      return 'prompt';
+    }
+
+    // Use getUserMedia to get actual state (this is most reliable on mobile)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(track => track.stop());
+      return 'granted';
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        return 'denied';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        return 'unknown';
+      } else {
+        // Other error - could be prompt or device issue
+        return permissionsApiState || 'prompt';
+      }
+    }
+  }, [lastKnownPermission]);
 
   // Request camera permission
   const requestCameraPermission = useCallback(async () => {
@@ -71,15 +130,20 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onLogout }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       // Permission granted - stop the stream immediately
       stream.getTracks().forEach(track => track.stop());
-      const newStatus = await checkCameraPermission();
-      setCameraPermission(newStatus);
+      const status = 'granted';
+      setLastKnownPermission(status);
+      setCameraPermission(status);
     } catch (err: any) {
       console.error('Camera permission request failed:', err);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        const newStatus = await checkCameraPermission();
-        setCameraPermission(newStatus === 'unknown' ? 'denied' : newStatus);
+        const status = 'denied';
+        setLastKnownPermission(status);
+        setCameraPermission(status);
       } else {
-        setCameraPermission('denied');
+        // For other errors, check again to get accurate state
+        const newStatus = await checkCameraPermission(false);
+        setLastKnownPermission(newStatus);
+        setCameraPermission(newStatus);
       }
     }
   }, [checkCameraPermission]);
@@ -87,7 +151,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onLogout }) => {
   // Check permission on mount and when settings are shown
   useEffect(() => {
     if (showCameraSettings) {
-      checkCameraPermission().then(setCameraPermission);
+      checkCameraPermission(true).then((status) => {
+        setCameraPermission(status);
+        // Update last known if we got a definitive answer
+        if (status === 'granted' || status === 'denied') {
+          setLastKnownPermission(status);
+        }
+      });
     }
   }, [showCameraSettings, checkCameraPermission]);
 
@@ -269,9 +339,15 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onLogout }) => {
                           </div>
                         </div>
                         <button
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            checkCameraPermission().then(setCameraPermission);
+                            setCameraPermission('checking');
+                            const status = await checkCameraPermission(true);
+                            setCameraPermission(status);
+                            // Update last known if we got a definitive answer
+                            if (status === 'granted' || status === 'denied') {
+                              setLastKnownPermission(status);
+                            }
                           }}
                           className="text-[10px] text-indigo-600 font-medium hover:text-indigo-700 transition-colors"
                         >
