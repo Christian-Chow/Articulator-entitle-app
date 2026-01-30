@@ -33,6 +33,21 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
     }
   };
 
+  // Check camera permission state
+  const checkCameraPermission = useCallback(async (): Promise<'granted' | 'denied' | 'prompt' | 'unknown'> => {
+    try {
+      // Check if Permissions API is available
+      if (navigator.permissions && navigator.permissions.query) {
+        const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        return result.state as 'granted' | 'denied' | 'prompt';
+      }
+    } catch (e) {
+      // Permissions API might not be supported or camera permission name might not be supported
+      console.log('Permission API not available or not supported:', e);
+    }
+    return 'unknown';
+  }, []);
+
   // Stop auto-scanning
   const stopAutoScan = useCallback(() => {
     setIsAutoScanning(false);
@@ -384,20 +399,133 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
       </div>
       {error && (
         <button
-          onClick={() => {
+          onClick={async () => {
             // Stop any existing stream first
             stopAutoScan();
             if (streamRef.current) {
               streamRef.current.getTracks().forEach(track => track.stop());
               streamRef.current = null;
             }
+            if (videoRef.current) {
+              videoRef.current.srcObject = null;
+            }
+            
+            // Clear error state temporarily
             setError(null);
+            
+            // Check permission state if API is available
+            const permissionState = await checkCameraPermission();
+            
+            // Small delay to ensure cleanup is complete before retrying
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
             // Attempt camera access again
             if (activeScanType === 'PiCode') {
-              startCamera();
+              try {
+                // Force a fresh permission request by calling getUserMedia directly
+                // This ensures we attempt even if permission was previously denied
+                const constraints = { 
+                  video: { 
+                    facingMode: 'environment',
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                  }
+                };
+                
+                let mediaStream: MediaStream | null = null;
+                
+                try {
+                  mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (envError: any) {
+                  // Try front camera
+                  try {
+                    const userConstraints = { 
+                      video: { 
+                        facingMode: 'user',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                      }
+                    };
+                    mediaStream = await navigator.mediaDevices.getUserMedia(userConstraints);
+                  } catch (userError: any) {
+                    // Try without facingMode
+                    const fallbackConstraints = { 
+                      video: { 
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                      }
+                    };
+                    mediaStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+                  }
+                }
+                
+                if (mediaStream) {
+                  // Success! Now call startCamera to set everything up properly
+                  // But first attach the stream we already have
+                  streamRef.current = mediaStream;
+                  
+                  // Try to enable continuous autofocus if supported
+                  const track = mediaStream.getVideoTracks()[0];
+                  const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+                  const focusModes = (capabilities as any).focusMode;
+                  if (focusModes && Array.isArray(focusModes) && focusModes.includes('continuous')) {
+                    try {
+                      await track.applyConstraints({ advanced: [{ focusMode: 'continuous' } as any] });
+                    } catch (e) {
+                      console.log('Could not apply continuous focus');
+                    }
+                  }
+                  
+                  setError(null);
+                  inflightRef.current = false;
+                  
+                  // Attach to video element
+                  setTimeout(async () => {
+                    if (videoRef.current) {
+                      videoRef.current.srcObject = mediaStream;
+                      try { 
+                        await videoRef.current.play(); 
+                      } catch (_) {}
+                      
+                      // Wait for video to be ready
+                      const waitUntilReady = () => {
+                        if (videoRef.current && 
+                            videoRef.current.videoWidth > 0 && 
+                            videoRef.current.videoHeight > 0) {
+                          startAutoScan();
+                        } else {
+                          requestAnimationFrame(waitUntilReady);
+                        }
+                      };
+                      waitUntilReady();
+                    }
+                  }, 50);
+                } else {
+                  throw new Error('Failed to access camera');
+                }
+              } catch (err: any) {
+                console.error('Failed to restart camera:', err);
+                
+                // Set appropriate error message
+                let errorMessage = 'Unable to access camera. ';
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                  if (permissionState === 'denied') {
+                    errorMessage += 'Camera permission is still denied. Please enable it in your browser settings and try again.';
+                  } else {
+                    errorMessage += 'Camera permission was denied. Please allow camera access in your browser settings and try again.';
+                  }
+                } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                  errorMessage += 'No camera found on this device.';
+                } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                  errorMessage += 'Camera is already in use by another application.';
+                } else {
+                  errorMessage += 'Please check your browser settings and allow camera access.';
+                }
+                setError(errorMessage);
+              }
             }
           }}
-          className="mt-6 px-8 py-2.5 bg-indigo-600 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors"
+          className="mb-4 px-8 py-2.5 bg-indigo-600 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors backdrop-blur-sm shadow-lg"
         >
           Try Again
         </button>
