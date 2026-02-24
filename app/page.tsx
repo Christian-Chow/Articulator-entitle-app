@@ -132,13 +132,6 @@ const App = () => {
     setIsScanning(true);
     setDecodeResult(null);
     setDecodeError(null);
-    
-    // For non-PiCode scans, use mock behavior
-    if (type !== 'PiCode') {
-      setTimeout(() => {
-        setIsScanning(false);
-      }, 2500);
-    }
   };
 
   const handleImageUpload = async (file: File) => {
@@ -168,6 +161,19 @@ const App = () => {
       setDecodeError(error instanceof Error ? error.message : 'Failed to decode image');
     } finally {
       setDecoding(false);
+    }
+  };
+
+  const handleQRDecode = (data: string) => {
+    setIsScanning(false);
+    const artworkId = extractArtworkId(data);
+    if (artworkId) {
+      setDecodeResult(`Found artwork: ${artworkId}`);
+      setTimeout(() => {
+        router.push(`/artworks/${artworkId}`);
+      }, 1000);
+    } else {
+      setDecodeResult(data);
     }
   };
 
@@ -315,6 +321,7 @@ const App = () => {
         activeScanType={activeScanType}
         onCancel={() => setIsScanning(false)}
         onCapture={activeScanType === 'PiCode' ? handleCameraCapture : undefined}
+        onQRDecode={activeScanType === 'QR Code' ? handleQRDecode : undefined}
       />
 
       {view !== 'auth' && <Navigation currentView={view} onNavigate={setView} />}
