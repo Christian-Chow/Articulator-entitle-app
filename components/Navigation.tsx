@@ -4,7 +4,7 @@ import React from 'react';
 import { History, Info, Palette, Scan, Settings } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 
-export type View = 'portal' | 'home' | 'archive' | 'guide' | 'profile' | 'auth' | 'forgot-password';
+export type View = 'portal' | 'home' | 'archive' | 'guide' | 'profile' | 'auth' | 'forgot-password' | 'nfc' | 'nfc-encode' | 'nfc-read';
 
 type NavigationProps = {
   currentView: View;

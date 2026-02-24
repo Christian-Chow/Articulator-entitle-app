@@ -11,6 +11,7 @@ type HeaderProps = {
   onLoginToggle: () => void;
   onLogoClick: () => void;
   isAuthView?: boolean;
+  showBack?: boolean;
   onBack?: () => void;
 };
 
@@ -21,6 +22,7 @@ const Header: React.FC<HeaderProps> = ({
   onLoginToggle,
   onLogoClick,
   isAuthView = false,
+  showBack = false,
   onBack,
 }) => (
   <header className="px-6 pt-2 pb-2">
@@ -34,7 +36,7 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-3">
-        {isAuthView && onBack ? (
+        {(isAuthView || showBack) && onBack ? (
           <button
             onClick={onBack}
             className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95"
