@@ -22,6 +22,11 @@
 .modal-fade-in { animation: fadeIn 0.3s ease-out; }
 .animate-fade-in { animation: fadeIn 0.2s ease-out; }
 .animate-scale-in { animation: scaleIn 0.2s ease-out; }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up { animation: slideUp 0.3s ease-out; }
 .gateway-enter { animation: fadeIn 0.5s ease-out; }
 .home-enter { animation: fadeIn 0.4s ease-out; }
 .auth-enter { animation: fadeIn 0.5s ease-out; }

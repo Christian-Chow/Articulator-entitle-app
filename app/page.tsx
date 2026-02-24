@@ -11,6 +11,9 @@ import MenuOption from '@/components/pages/MenuOption';
 import LoginPage from '@/components/pages/LoginPage';
 import PlaceholderPage from '@/components/pages/PlaceholderPage';
 import PortalPage from '@/components/pages/PortalPage';
+import NfcPage from '@/components/pages/NfcPage';
+import NfcEncodePage from '@/components/pages/NfcEncodePage';
+import NfcReadPage from '@/components/pages/NfcReadPage';
 import ProfilePage from '@/components/pages/ProfilePage';
 import ForgotPasswordPage from '@/components/pages/ForgotPasswordPage';
 import { decodeImage } from '@/lib/api';
@@ -230,9 +233,16 @@ const App = () => {
         }}
         onLogoClick={() => setView('portal')}
         isAuthView={view === 'auth' || view === 'forgot-password'}
+        showBack={view === 'nfc' || view === 'nfc-encode' || view === 'nfc-read'}
         onBack={() => {
           if (view === 'forgot-password') {
             setView('auth');
+          } else if (view === 'nfc-read') {
+            setView('nfc');
+          } else if (view === 'nfc-encode') {
+            setView('nfc');
+          } else if (view === 'nfc') {
+            setView('portal');
           } else {
             setView('portal');
           }
@@ -240,7 +250,27 @@ const App = () => {
       />
 
       <main className="px-6">
-        {view === 'portal' && <PortalPage onScan={triggerScan} onUploadImage={handleImageUpload} />}
+        {view === 'portal' && (
+          <PortalPage
+            onScan={(type) => (type === 'NFC' ? setView('nfc') : triggerScan(type))}
+            onUploadImage={handleImageUpload}
+          />
+        )}
+        {view === 'nfc' && (
+          <NfcPage
+            onNfcRead={() => setView('nfc-encode')}
+            onNfcWrite={() => setView('nfc-read')}
+          />
+        )}
+        {view === 'nfc-encode' && (
+          <NfcEncodePage
+            onEncode={(type, value) => {
+              // TODO: call NFC encode API / native
+              console.log('NFC encode', type, value);
+            }}
+          />
+        )}
+        {view === 'nfc-read' && <NfcReadPage />}
         {view === 'home' && <MenuOption isLoggedIn={isLoggedIn} />}
         {view === 'auth' && <LoginPage onSuccess={() => {}} onForgotPassword={() => setView('forgot-password')} />}
         {view === 'forgot-password' && <ForgotPasswordPage onBack={() => setView('auth')} />}
