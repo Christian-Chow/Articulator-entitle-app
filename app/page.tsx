@@ -181,30 +181,26 @@ const App = () => {
     setDecoding(true);
     setDecodeResult(null);
     setDecodeError(null);
+    setIsScanning(false);
 
     try {
       const result = await decodeImage(file);
       if (result.error) {
         setDecodeError(result.error + (result.details ? `: ${result.details}` : ''));
-        setIsScanning(false);
       } else if (result.decodedMessage) {
         const artworkId = extractArtworkId(result.decodedMessage);
         if (artworkId) {
           setDecodeResult(`Found artwork: ${artworkId}`);
-          setIsScanning(false);
-          // Navigate to artwork page
           setTimeout(() => {
             router.push(`/artworks/${artworkId}`);
           }, 1000);
         } else {
           setDecodeResult(result.decodedMessage);
           setDecodeError('Could not extract artwork ID from decoded message');
-          setIsScanning(false);
         }
       }
     } catch (error) {
       setDecodeError(error instanceof Error ? error.message : 'Failed to decode image');
-      setIsScanning(false);
     } finally {
       setDecoding(false);
     }
@@ -285,21 +281,14 @@ const App = () => {
         {view === 'profile' && <ProfilePage user={user} onLogout={handleLogout} />}
       </main>
 
-      {(decodeResult || decodeError) && (
+      {decodeError && (
         <div className="fixed bottom-24 left-6 right-6 z-50">
-          <div className={`rounded-2xl p-4 shadow-lg ${
-            decodeResult ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-          }`}>
-            <p className={`text-sm font-medium ${
-              decodeResult ? 'text-green-900' : 'text-red-900'
-            }`}>
-              {decodeResult ? `Decoded: ${decodeResult}` : decodeError}
+          <div className="rounded-2xl p-4 shadow-lg bg-red-50 border border-red-200">
+            <p className="text-sm font-medium text-red-900">
+              {decodeError}
             </p>
             <button
-              onClick={() => {
-                setDecodeResult(null);
-                setDecodeError(null);
-              }}
+              onClick={() => setDecodeError(null)}
               className="mt-2 text-xs text-slate-600 hover:text-slate-900"
             >
               Dismiss
