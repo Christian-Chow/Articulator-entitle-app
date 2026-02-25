@@ -39,14 +39,14 @@ const menuOptions: MenuOption[] = [
 
 type MenuOptionProps = {
   isLoggedIn: boolean;
-  artworkId: string;
+  artworkId?: string;
 };
 
 const MenuOption: React.FC<MenuOptionProps> = ({ isLoggedIn, artworkId }) => {
   const router = useRouter();
 
   const handleOptionClick = (optionId: string) => {
-    if (optionId === 'coa') {
+    if (optionId === 'coa' && artworkId) {
       router.push(`/artworks/${artworkId}/coa`);
     }
   };
