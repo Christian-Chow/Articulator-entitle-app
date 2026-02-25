@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Cpu, QrCode } from 'lucide-react';
+import jsQR from 'jsqr';
 import { BACKEND_API_URL } from '@/lib/urls';
 
 type ScanningModalProps = {
@@ -9,9 +10,10 @@ type ScanningModalProps = {
   activeScanType: string;
   onCancel: () => void;
   onCapture?: (file: File) => void;
+  onQRDecode?: (data: string) => void;
 };
 
-const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanType, onCancel, onCapture }) => {
+const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanType, onCancel, onCapture, onQRDecode }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -59,7 +61,7 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
     inflightRef.current = false;
   }, []);
 
-  // Capture frame and decode
+  // Capture frame and decode (PiCode via backend, QR Code via jsQR)
   const captureAndDecode = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
       if (!videoRef.current || !canvasRef.current || videoRef.current.paused || videoRef.current.ended) {
@@ -89,6 +91,46 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
 
       context.drawImage(video, sx, sy, side, side, 0, 0, TARGET, TARGET);
 
+      // QR Code: decode client-side with jsQR
+      if (activeScanType === 'QR Code') {
+        const imageData = context.getImageData(0, 0, TARGET, TARGET);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        if (code && code.data && isScanningRef.current) {
+          const decodedData = code.data.trim();
+          // Handle URL redirects
+          if (isUrl(decodedData)) {
+            stopAutoScan();
+            if (streamRef.current) {
+              streamRef.current.getTracks().forEach(track => track.stop());
+              streamRef.current = null;
+            }
+            window.location.href = decodedData;
+            return resolve();
+          }
+          // Freeze frame before stopping camera
+          if (videoRef.current) {
+            try {
+              const tempCanvas = document.createElement('canvas');
+              tempCanvas.width = videoRef.current.videoWidth;
+              tempCanvas.height = videoRef.current.videoHeight;
+              const tempCtx = tempCanvas.getContext('2d');
+              if (tempCtx) {
+                tempCtx.drawImage(videoRef.current, 0, 0);
+                setFrozenFrame(tempCanvas.toDataURL());
+              }
+            } catch (e) {
+              console.error('Failed to capture freeze frame:', e);
+            }
+          }
+          stopAutoScan();
+          if (onQRDecode) {
+            onQRDecode(decodedData);
+          }
+        }
+        return resolve();
+      }
+
+      // PiCode: decode via backend
       canvas.toBlob(async (blob) => {
         if (blob && isScanningRef.current) {
           const file = new File([blob], 'camera-capture.png', { type: 'image/png' });
@@ -149,7 +191,7 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
         resolve();
       }, 'image/png');
     });
-  }, [onCapture, stopAutoScan]);
+  }, [activeScanType, onCapture, onQRDecode, stopAutoScan]);
 
   // Scanning loop
   const scanLoop = useCallback(() => {
@@ -308,8 +350,8 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
       return;
     }
 
-    // Only start camera for PiCode scanning
-    if (activeScanType === 'PiCode') {
+    // Start camera for PiCode and QR Code scanning
+    if (activeScanType === 'PiCode' || activeScanType === 'QR Code') {
       startCamera();
     }
 
@@ -328,7 +370,7 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
 
   if (!isScanning) return null;
 
-  const showCamera = activeScanType === 'PiCode' && !error;
+  const showCamera = (activeScanType === 'PiCode' || activeScanType === 'QR Code') && !error;
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center text-white p-8 modal-fade-in">
@@ -393,7 +435,9 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
             : activeScanType === 'NFC'
             ? 'Hold your device near the piece identifier'
             : isAutoScanning
-            ? 'Align the PiCode within the frame'
+            ? activeScanType === 'QR Code'
+              ? 'Align the QR code within the frame'
+              : 'Align the PiCode within the frame'
             : 'Initializing camera...'}
         </p>
       </div>
@@ -420,7 +464,7 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
             await new Promise(resolve => setTimeout(resolve, 100));
             
             // Attempt camera access again
-            if (activeScanType === 'PiCode') {
+            if (activeScanType === 'PiCode' || activeScanType === 'QR Code') {
               try {
                 // Force a fresh permission request by calling getUserMedia directly
                 // This ensures we attempt even if permission was previously denied

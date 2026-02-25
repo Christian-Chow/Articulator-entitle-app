@@ -77,7 +77,7 @@ export default function ArtworkMenuPage() {
       />
 
       <main className="px-6">
-        <MenuOption isLoggedIn={isLoggedIn} />
+        <MenuOption isLoggedIn={isLoggedIn} artworkId={artworkId} />
       </main>
     </div>
   );
