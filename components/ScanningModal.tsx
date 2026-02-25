@@ -149,17 +149,8 @@ const ScanningModal: React.FC<ScanningModalProps> = ({ isScanning, activeScanTyp
                 response.ok && 
                 data.decodedMessage && 
                 !data.decodedMessage.includes('Can not detect')) {
-              
-              // Handle URL redirects
-              if (isUrl(data.decodedMessage)) {
-                stopAutoScan();
-                if (streamRef.current) {
-                  streamRef.current.getTracks().forEach(track => track.stop());
-                  streamRef.current = null;
-                }
-                window.location.href = data.decodedMessage;
-                return;
-              }
+              // PiCode: always pass to onCapture; parent extracts artworkId and navigates in-app
+              // (no URL redirect - keeps user in app like upload workflow)
 
               // Freeze frame before stopping camera
               if (videoRef.current) {
