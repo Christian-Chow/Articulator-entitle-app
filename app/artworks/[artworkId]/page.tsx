@@ -127,7 +127,7 @@ export default function ArtworkDetailPage() {
 
             {/* Artwork Tools Menu */}
             <div className="pt-4">
-              <MenuOption isLoggedIn={isLoggedIn} />
+              <MenuOption isLoggedIn={isLoggedIn} artworkId={artworkId} />
             </div>
           </div>
         )}
