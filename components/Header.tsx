@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, ChevronDown, LayoutGrid, LogIn, LogOut } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Loader2, LayoutGrid, LogIn, LogOut } from 'lucide-react';
 
 // Metamask logo (uses official asset from public folder)
 const MetamaskLogo = ({ size = 16 }: { size?: number }) => (
@@ -33,6 +33,8 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [showWalletDropdown, setShowWalletDropdown] = useState(false);
+  const [showConnectionPopup, setShowConnectionPopup] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const walletDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,8 +55,21 @@ const Header: React.FC<HeaderProps> = ({
       setShowWalletDropdown(false);
       return;
     }
-    setIsWalletConnected(!isWalletConnected);
+    if (isWalletConnected) {
+      setIsWalletConnected(false);
+      setShowWalletDropdown(false);
+      return;
+    }
     setShowWalletDropdown(false);
+    setShowConnectionPopup(true);
+    setIsConnecting(true);
+    // Simulate connection delay and success display
+    setTimeout(() => {
+      setIsConnecting(false);
+      setIsWalletConnected(true);
+      // Keep the \"Connected\" state visible a bit longer
+      setTimeout(() => setShowConnectionPopup(false), 1600);
+    }, 3000);
   };
 
   return (
@@ -143,6 +158,42 @@ const Header: React.FC<HeaderProps> = ({
         <h2 className="text-slate-500 text-sm mb-1">{subtitle}</h2>
         <h1 className="text-2xl font-medium text-black leading-tight">{title}</h1>
       </div>
+    )}
+
+    {/* Simulated MetaMask connection popup */}
+    {showConnectionPopup && (
+      <>
+        <div
+          className="fixed inset-0 bg-black/40 z-[100] animate-fade-in"
+          onClick={() => !isConnecting && setShowConnectionPopup(false)}
+          aria-hidden="true"
+        />
+        <div className="fixed inset-0 z-[101] flex items-center justify-center p-6 pointer-events-none">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl pointer-events-auto animate-scale-in">
+            <div className="flex flex-col items-center text-center">
+              <div className="p-4 rounded-2xl bg-amber-50 mb-6">
+                <MetamaskLogo size={48} />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                {isConnecting ? 'Connecting...' : 'Connected'}
+              </h3>
+              <p className="text-sm text-slate-500 mb-6">
+                {isConnecting
+                  ? 'Please confirm the connection in your MetaMask extension.'
+                  : 'Your wallet has been connected successfully.'}
+              </p>
+              {isConnecting ? (
+                <Loader2 size={32} className="text-amber-500 animate-spin" />
+              ) : (
+                <div className="flex items-center gap-2 text-emerald-600">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className="text-sm font-medium">MetaMask connected</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </>
     )}
   </header>
   );
