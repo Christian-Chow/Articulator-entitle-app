@@ -12,7 +12,7 @@ type HeaderProps = {
   subtitle: string;
   title: string;
   isLoggedIn: boolean;
-  isWalletConnected: boolean;
+  isWalletConnected?: boolean;
   onLoginToggle: () => void;
   onLogoClick: () => void;
   isAuthView?: boolean;
@@ -26,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({
   subtitle,
   title,
   isLoggedIn,
-  isWalletConnected,
+  isWalletConnected = false,
   onLoginToggle,
   onLogoClick,
   isAuthView = false,
