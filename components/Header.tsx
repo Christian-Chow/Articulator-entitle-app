@@ -12,26 +12,29 @@ type HeaderProps = {
   subtitle: string;
   title: string;
   isLoggedIn: boolean;
+  isWalletConnected: boolean;
   onLoginToggle: () => void;
   onLogoClick: () => void;
   isAuthView?: boolean;
   showBack?: boolean;
   onBack?: () => void;
   onGuestWalletConnect?: () => void;
+  onWalletConnectChange?: (connected: boolean) => void;
 };
 
 const Header: React.FC<HeaderProps> = ({
   subtitle,
   title,
   isLoggedIn,
+  isWalletConnected,
   onLoginToggle,
   onLogoClick,
   isAuthView = false,
   showBack = false,
   onBack,
   onGuestWalletConnect,
+  onWalletConnectChange,
 }) => {
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [showWalletDropdown, setShowWalletDropdown] = useState(false);
   const [showConnectionPopup, setShowConnectionPopup] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -56,7 +59,7 @@ const Header: React.FC<HeaderProps> = ({
       return;
     }
     if (isWalletConnected) {
-      setIsWalletConnected(false);
+      onWalletConnectChange?.(false);
       setShowWalletDropdown(false);
       return;
     }
@@ -66,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({
     // Simulate connection delay and success display
     setTimeout(() => {
       setIsConnecting(false);
-      setIsWalletConnected(true);
+      onWalletConnectChange?.(true);
       // Keep the \"Connected\" state visible a bit longer
       setTimeout(() => setShowConnectionPopup(false), 1600);
     }, 3000);
