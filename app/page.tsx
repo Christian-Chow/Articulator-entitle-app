@@ -299,7 +299,8 @@ const App = () => {
             onTagRead={(payload) => {
               const artworkId = extractArtworkId(payload);
               if (artworkId) {
-                router.push(`/artworks/${artworkId}`);
+                const isCoa = /\/artworks\/[^/]+\/coa/.test(payload);
+                router.push(isCoa ? `/artworks/${artworkId}/coa` : `/artworks/${artworkId}`);
               }
             }}
           />
