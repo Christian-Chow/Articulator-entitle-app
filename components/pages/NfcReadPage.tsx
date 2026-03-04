@@ -36,9 +36,16 @@ const URI_PREFIXES: Record<number, string> = {
 
 function decodeUrlRecord(data: DataView): string {
   const prefixCode = data.getUint8(0);
-  const prefix = URI_PREFIXES[prefixCode] ?? '';
-  const rest = new TextDecoder().decode(new Uint8Array(data.buffer, data.byteOffset + 1, data.byteLength - 1));
-  return prefix + rest;
+  const prefix = URI_PREFIXES[prefixCode];
+  if (prefix !== undefined) {
+    // Recognised NDEF URI prefix code — strip it and prepend the expanded prefix
+    const rest = new TextDecoder().decode(
+      new Uint8Array(data.buffer, data.byteOffset + 1, data.byteLength - 1)
+    );
+    return prefix + rest;
+  }
+  // No NDEF prefix byte — Chrome stored the full URL as raw UTF-8 bytes
+  return new TextDecoder().decode(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
 }
 
 function decodeTextRecord(data: DataView): string {
