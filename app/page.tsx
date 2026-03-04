@@ -30,6 +30,8 @@ const App = () => {
   const [decoding, setDecoding] = useState(false);
   const [decodeResult, setDecodeResult] = useState<string | null>(null);
   const [decodeError, setDecodeError] = useState<string | null>(null);
+  const [walletToast, setWalletToast] = useState<string | null>(null);
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -212,6 +214,13 @@ const App = () => {
     'Authenticated Collector';
   const headerTitle = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Welcome Guest';
 
+  // Auto-hide wallet toast after a short delay
+  useEffect(() => {
+    if (!walletToast) return;
+    const timer = setTimeout(() => setWalletToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [walletToast]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FDFCFB] flex items-center justify-center">
@@ -226,6 +235,7 @@ const App = () => {
         subtitle={headerSubtitle}
         title={headerTitle}
         isLoggedIn={isLoggedIn}
+        isWalletConnected={isWalletConnected}
         onLoginToggle={() => {
           if (isLoggedIn) {
             handleLogout();
@@ -249,12 +259,27 @@ const App = () => {
             setView('portal');
           }
         }}
+        onGuestWalletConnect={() => {
+          setView('auth');
+          setWalletToast('Please login first to connect your wallet');
+        }}
+        onWalletConnectChange={setIsWalletConnected}
       />
 
       <main className="px-6">
         {view === 'portal' && (
           <PortalPage
-            onScan={(type) => (type === 'NFC' ? setView('nfc') : triggerScan(type))}
+            onScan={(type) => {
+              if (type === 'PiCode' && !isWalletConnected) {
+                setWalletToast('Please connect your wallet first to scan PiCode.');
+                return;
+              }
+              if (type === 'NFC') {
+                setView('nfc');
+              } else {
+                triggerScan(type);
+              }
+            }}
             onUploadImage={handleImageUpload}
           />
         )}
@@ -289,6 +314,22 @@ const App = () => {
             </p>
             <button
               onClick={() => setDecodeError(null)}
+              className="mt-2 text-xs text-slate-600 hover:text-slate-900"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {walletToast && (
+        <div className="fixed bottom-36 left-6 right-6 z-50">
+          <div className="rounded-2xl p-4 shadow-lg bg-red-50 border border-red-200">
+            <p className="text-sm font-medium text-red-900">
+              {walletToast}
+            </p>
+            <button
+              onClick={() => setWalletToast(null)}
               className="mt-2 text-xs text-slate-600 hover:text-slate-900"
             >
               Dismiss
