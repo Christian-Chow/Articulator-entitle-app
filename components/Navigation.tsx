@@ -1,10 +1,10 @@
 'use client'
 
 import React from 'react';
-import { History, Info, Palette, Scan, Settings } from 'lucide-react';
+import { History, Image, Palette, Scan, Settings } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 
-export type View = 'portal' | 'home' | 'archive' | 'guide' | 'profile' | 'auth' | 'forgot-password' | 'nfc' | 'nfc-encode' | 'nfc-read';
+export type View = 'portal' | 'home' | 'archive' | 'album' | 'profile' | 'auth' | 'forgot-password' | 'nfc' | 'nfc-encode' | 'nfc-read';
 
 type NavigationProps = {
   currentView: View;
@@ -36,11 +36,11 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onNavigate }) => (
       </button>
     </div>
     <button
-      onClick={() => onNavigate('guide')}
-      className={`flex flex-col items-center gap-1 ${currentView === 'guide' ? 'text-indigo-600' : 'text-slate-400'}`}
+      onClick={() => onNavigate('album')}
+      className={`flex flex-col items-center gap-1 ${currentView === 'album' ? 'text-indigo-600' : 'text-slate-400'}`}
     >
-      <Info size={24} strokeWidth={1.5} />
-      <span className="text-[10px] font-bold uppercase tracking-wider">Guide</span>
+      <Image size={24} strokeWidth={1.5} />
+      <span className="text-[10px] font-bold uppercase tracking-wider">Album</span>
     </button>
     <button
       onClick={() => onNavigate('profile')}

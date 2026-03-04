@@ -10,6 +10,7 @@ import ScanningModal from '@/components/ScanningModal';
 import MenuOption from '@/components/pages/MenuOption';
 import LoginPage from '@/components/pages/LoginPage';
 import PlaceholderPage from '@/components/pages/PlaceholderPage';
+import AlbumPage from '@/components/pages/AlbumPage';
 import PortalPage from '@/components/pages/PortalPage';
 import NfcPage from '@/components/pages/NfcPage';
 import NfcEncodePage from '@/components/pages/NfcEncodePage';
@@ -211,6 +212,7 @@ const App = () => {
   const headerSubtitle = 
     view === 'portal' ? 'Registry Access' : 
     view === 'profile' ? 'Registry Member' : 
+    view === 'album' ? 'Authenticated Artist' :
     'Authenticated Collector';
   const headerTitle = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Welcome Guest';
 
@@ -285,8 +287,8 @@ const App = () => {
         )}
         {view === 'nfc' && (
           <NfcPage
-            onNfcRead={() => setView('nfc-encode')}
-            onNfcWrite={() => setView('nfc-read')}
+            onNfcEncode={() => setView('nfc-encode')}
+            onNfcRead={() => setView('nfc-read')}
           />
         )}
         {view === 'nfc-encode' && (
@@ -297,12 +299,26 @@ const App = () => {
             }}
           />
         )}
-        {view === 'nfc-read' && <NfcReadPage />}
+        {view === 'nfc-read' && (
+          <NfcReadPage
+            onTagRead={(payload) => {
+              const artworkId = extractArtworkId(payload);
+              if (artworkId) {
+                router.push(`/artworks/${artworkId}`);
+              }
+            }}
+          />
+        )}
         {view === 'home' && <MenuOption isLoggedIn={isLoggedIn} />}
         {view === 'auth' && <LoginPage onSuccess={() => {}} onForgotPassword={() => setView('forgot-password')} />}
         {view === 'forgot-password' && <ForgotPasswordPage onBack={() => setView('auth')} />}
         {view === 'archive' && <PlaceholderPage label="Archive" />}
-        {view === 'guide' && <PlaceholderPage label="Guide" />}
+        {view === 'album' && (
+          <AlbumPage
+            user={user}
+            onArtworkClick={(artworkId) => router.push(`/artworks/${artworkId}`)}
+          />
+        )}
         {view === 'profile' && <ProfilePage user={user} onLogout={handleLogout} />}
       </main>
 
