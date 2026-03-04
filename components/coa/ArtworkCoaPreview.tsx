@@ -140,7 +140,7 @@ const CoaDocument = ({ artwork }: ArtworkCoaProps) => (
             {artwork.title}
             {artwork.metadata?.core?.creationDate && ` (${artwork.metadata.core.creationDate})`}
           </Text>
-          <Text style={styles.artworkDid}>did:art:enq:6a2f6fead3b8a40966cb37fa49b3ed0eb1ffbbe4</Text>
+          {artwork.did && <Text style={styles.artworkDid}>{artwork.did}</Text>}
           <Text style={styles.artworkType}>
             {artwork.metadata?.core?.mainCategory}
             {artwork.metadata?.core?.subCategory && ` | ${artwork.metadata.core.subCategory}`}
@@ -253,9 +253,11 @@ const ArtworkCoaPreview = ({ artwork }: ArtworkCoaProps) => {
                 <span> ({artwork.metadata.core.creationDate})</span>
               )}
             </p>
-            <p className="text-[11px] font-semibold mt-1 break-all" style={{ color: '#ea5a1d' }}>
-              did:art:enq:6a2f6fead3b8a40966cb37fa49b3ed0eb1ffbbe4
-            </p>
+            {artwork.did && (
+              <p className="text-[11px] font-semibold mt-1 break-all" style={{ color: '#ea5a1d' }}>
+                {artwork.did}
+              </p>
+            )}
             {(artwork.metadata?.core?.mainCategory) && (
               <p className="text-sm mt-0.5" style={{ color: '#7f7f7f' }}>
                 {artwork.metadata.core.mainCategory}
