@@ -292,12 +292,7 @@ const App = () => {
           />
         )}
         {view === 'nfc-encode' && (
-          <NfcEncodePage
-            onEncode={(type, value) => {
-              // TODO: call NFC encode API / native
-              console.log('NFC encode', type, value);
-            }}
-          />
+          <NfcEncodePage user={user} />
         )}
         {view === 'nfc-read' && (
           <NfcReadPage
