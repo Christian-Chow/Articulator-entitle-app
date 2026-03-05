@@ -33,6 +33,7 @@ const App = () => {
   const [decodeError, setDecodeError] = useState<string | null>(null);
   const [walletToast, setWalletToast] = useState<string | null>(null);
   const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -123,10 +124,24 @@ const App = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) {
+      setUserRole(null);
+      return;
+    }
+    supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => setUserRole(data?.role ?? null));
+  }, [user?.id]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
     setUser(null);
+    setUserRole(null);
     setView('portal');
   };
 
@@ -209,10 +224,11 @@ const App = () => {
     }
   };
 
-  const headerSubtitle = 
-    view === 'portal' ? 'Registry Access' : 
-    view === 'profile' ? 'Registry Member' : 
-    view === 'album' ? 'Authenticated Artist' :
+  const authLabel = userRole?.toLowerCase() === 'artist' ? 'Authenticated Artist' : 'Authenticated Collector';
+  const headerSubtitle =
+    view === 'portal' ? 'Registry Access' :
+    view === 'profile' ? 'Registry Member' :
+    (view === 'nfc' || view === 'nfc-encode' || view === 'nfc-read' || view === 'album' || view === 'archive') ? authLabel :
     'Authenticated Collector';
   const headerTitle = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Welcome Guest';
 
