@@ -9,7 +9,10 @@ import {
   StyleSheet,
   Text,
   Image,
+  Link,
 } from '@react-pdf/renderer';
+
+const DID_VIEW_BASE_URL = 'http://did-art.articulator.ai:9001/1.0/view/';
 import { getArtworkWatermarkedPublicUrl } from '@/lib/urls';
 
 const PDFDownloadLink = dynamic(
@@ -140,7 +143,11 @@ const CoaDocument = ({ artwork }: ArtworkCoaProps) => (
             {artwork.title}
             {artwork.metadata?.core?.creationDate && ` (${artwork.metadata.core.creationDate})`}
           </Text>
-          {artwork.did && <Text style={styles.artworkDid}>{artwork.did}</Text>}
+          {artwork.did && (
+            <Link src={`${DID_VIEW_BASE_URL}${artwork.did}`} style={styles.artworkDid}>
+              {artwork.did}
+            </Link>
+          )}
           <Text style={styles.artworkType}>
             {artwork.metadata?.core?.mainCategory}
             {artwork.metadata?.core?.subCategory && ` | ${artwork.metadata.core.subCategory}`}
@@ -254,9 +261,15 @@ const ArtworkCoaPreview = ({ artwork }: ArtworkCoaProps) => {
               )}
             </p>
             {artwork.did && (
-              <p className="text-[11px] font-semibold mt-1 break-all" style={{ color: '#ea5a1d' }}>
+              <a
+                href={`${DID_VIEW_BASE_URL}${artwork.did}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold mt-1 break-all hover:underline block"
+                style={{ color: '#ea5a1d' }}
+              >
                 {artwork.did}
-              </p>
+              </a>
             )}
             {(artwork.metadata?.core?.mainCategory) && (
               <p className="text-sm mt-0.5" style={{ color: '#7f7f7f' }}>
