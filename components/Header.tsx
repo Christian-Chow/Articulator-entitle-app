@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, ChevronDown, Loader2, LayoutGrid, LogIn, LogOut } from 'lucide-react';
 
-// ADD THIS: MetaMask type declaration
 declare global {
   interface Window {
     ethereum?: any;
