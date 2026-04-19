@@ -3,6 +3,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, ChevronDown, Loader2, LayoutGrid, LogIn, LogOut } from 'lucide-react';
 
+// ADD THIS: MetaMask type declaration
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 // Metamask logo (uses official asset from public folder)
 const MetamaskLogo = ({ size = 16 }: { size?: number }) => (
   <img src="/metamask.png" alt="MetaMask" width={size} height={size} className="object-contain" />
@@ -52,7 +59,7 @@ const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showWalletDropdown]);
 
-  const handleWalletOptionClick = () => {
+  const handleWalletOptionClick = async () => {
     if (!isLoggedIn && onGuestWalletConnect) {
       onGuestWalletConnect();
       setShowWalletDropdown(false);
@@ -66,13 +73,37 @@ const Header: React.FC<HeaderProps> = ({
     setShowWalletDropdown(false);
     setShowConnectionPopup(true);
     setIsConnecting(true);
-    // Simulate connection delay and success display
-    setTimeout(() => {
+    
+    try {
+      if (!window.ethereum) {
+        throw new Error('MetaMask is not installed. Please install MetaMask extension.');
+      }
+      
+      // Request account access from MetaMask (this will open MetaMask popup)
+      const accounts = await window.ethereum.request({ 
+        method: 'eth_requestAccounts' 
+      });
+      
       setIsConnecting(false);
       onWalletConnectChange?.(true);
-      // Keep the \"Connected\" state visible a bit longer
+      
       setTimeout(() => setShowConnectionPopup(false), 1600);
-    }, 3000);
+    } catch (error: any) {
+      console.error('Error connecting to MetaMask:', error);
+      setIsConnecting(false);
+      setShowConnectionPopup(false);
+      
+      let errorMessage = 'Failed to connect to MetaMask.';
+      if (error.code === 4001) {
+        errorMessage = 'Connection rejected. Please approve the connection in MetaMask.';
+      } else if (error.code === -32002) {
+        errorMessage = 'Connection request already pending. Please check MetaMask.';
+      } else if (error.message?.includes('not installed')) {
+        errorMessage = 'MetaMask is not installed. Please install MetaMask extension.';
+      }
+      
+      alert(errorMessage);
+    }
   };
 
   return (
@@ -163,7 +194,7 @@ const Header: React.FC<HeaderProps> = ({
       </div>
     )}
 
-    {/* Simulated MetaMask connection popup */}
+    {/* MetaMask connection popup */}
     {showConnectionPopup && (
       <>
         <div
