@@ -62,7 +62,6 @@ const Header: React.FC<HeaderProps> = ({
   const checkConnection = async () => {
     if (typeof window.ethereum !== 'undefined') {
       try {
-        // eth_accounts returns the addresses already authorized for the site
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
 
         if (accounts.length > 0) {
@@ -80,7 +79,6 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   checkConnection();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
 
   const handleWalletOptionClick = async () => {
