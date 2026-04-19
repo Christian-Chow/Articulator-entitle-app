@@ -58,6 +58,31 @@ const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showWalletDropdown]);
 
+  useEffect(() => {
+  const checkConnection = async () => {
+    if (typeof window.ethereum !== 'undefined') {
+      try {
+        // eth_accounts returns the addresses already authorized for the site
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+
+        if (accounts.length > 0) {
+          console.log("Connected:", accounts[0]);
+          onWalletConnectChange?.(true);
+        } else {
+          console.log("Not connected");
+        }
+      } catch (error) {
+        console.error("Error checking connection:", error);
+      }
+    } else {
+      console.log("MetaMask is not installed");
+    }
+  };
+
+  checkConnection();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
   const handleWalletOptionClick = async () => {
     if (!isLoggedIn && onGuestWalletConnect) {
       onGuestWalletConnect();
