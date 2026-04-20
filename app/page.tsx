@@ -10,6 +10,7 @@ import ScanningModal from '@/components/ScanningModal';
 import MenuOption from '@/components/pages/MenuOption';
 import LoginPage from '@/components/pages/LoginPage';
 import PlaceholderPage from '@/components/pages/PlaceholderPage';
+import AlbumPage from '@/components/pages/AlbumPage';
 import PortalPage from '@/components/pages/PortalPage';
 import NfcPage from '@/components/pages/NfcPage';
 import NfcEncodePage from '@/components/pages/NfcEncodePage';
@@ -32,6 +33,7 @@ const App = () => {
   const [decodeError, setDecodeError] = useState<string | null>(null);
   const [walletToast, setWalletToast] = useState<string | null>(null);
   const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -122,10 +124,24 @@ const App = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) {
+      setUserRole(null);
+      return;
+    }
+    supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => setUserRole(data?.role ?? null));
+  }, [user?.id]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
     setUser(null);
+    setUserRole(null);
     setView('portal');
   };
 
@@ -208,9 +224,11 @@ const App = () => {
     }
   };
 
-  const headerSubtitle = 
-    view === 'portal' ? 'Registry Access' : 
-    view === 'profile' ? 'Registry Member' : 
+  const authLabel = userRole?.toLowerCase() === 'artist' ? 'Authenticated Artist' : 'Authenticated Collector';
+  const headerSubtitle =
+    view === 'portal' ? 'Registry Access' :
+    view === 'profile' ? 'Registry Member' :
+    (view === 'nfc' || view === 'nfc-encode' || view === 'nfc-read' || view === 'album' || view === 'archive') ? authLabel :
     'Authenticated Collector';
   const headerTitle = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Welcome Guest';
 
@@ -285,24 +303,34 @@ const App = () => {
         )}
         {view === 'nfc' && (
           <NfcPage
-            onNfcRead={() => setView('nfc-encode')}
-            onNfcWrite={() => setView('nfc-read')}
+            onNfcEncode={() => setView('nfc-encode')}
+            onNfcRead={() => setView('nfc-read')}
           />
         )}
         {view === 'nfc-encode' && (
-          <NfcEncodePage
-            onEncode={(type, value) => {
-              // TODO: call NFC encode API / native
-              console.log('NFC encode', type, value);
+          <NfcEncodePage user={user} />
+        )}
+        {view === 'nfc-read' && (
+          <NfcReadPage
+            onTagRead={(payload) => {
+              const artworkId = extractArtworkId(payload);
+              if (artworkId) {
+                const isCoa = /\/artworks\/[^/]+\/coa/.test(payload);
+                router.push(isCoa ? `/artworks/${artworkId}/coa` : `/artworks/${artworkId}`);
+              }
             }}
           />
         )}
-        {view === 'nfc-read' && <NfcReadPage />}
         {view === 'home' && <MenuOption isLoggedIn={isLoggedIn} />}
         {view === 'auth' && <LoginPage onSuccess={() => {}} onForgotPassword={() => setView('forgot-password')} />}
         {view === 'forgot-password' && <ForgotPasswordPage onBack={() => setView('auth')} />}
         {view === 'archive' && <PlaceholderPage label="Archive" />}
-        {view === 'guide' && <PlaceholderPage label="Guide" />}
+        {view === 'album' && (
+          <AlbumPage
+            user={user}
+            onArtworkClick={(artworkId) => router.push(`/artworks/${artworkId}`)}
+          />
+        )}
         {view === 'profile' && <ProfilePage user={user} onLogout={handleLogout} />}
       </main>
 

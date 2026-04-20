@@ -9,19 +9,14 @@ import {
   StyleSheet,
   Text,
   Image,
+  Link,
 } from '@react-pdf/renderer';
+
+const DID_VIEW_BASE_URL = 'http://did-art.articulator.ai:9001/1.0/view/';
 import { getArtworkWatermarkedPublicUrl } from '@/lib/urls';
 
 const PDFDownloadLink = dynamic(
   () => import("./PDFDownloadLink"),
-  {
-    ssr: false,
-    loading: () => <p className="text-slate-400 text-sm">Loading...</p>,
-  },
-);
-
-const PDFViewer = dynamic(
-  () => import("./PDFViewer"),
   {
     ssr: false,
     loading: () => <p className="text-slate-400 text-sm">Loading...</p>,
@@ -148,7 +143,11 @@ const CoaDocument = ({ artwork }: ArtworkCoaProps) => (
             {artwork.title}
             {artwork.metadata?.core?.creationDate && ` (${artwork.metadata.core.creationDate})`}
           </Text>
-          <Text style={styles.artworkDid}>did:art:enq:6a2f6fead3b8a40966cb37fa49b3ed0eb1ffbbe4</Text>
+          {artwork.did && (
+            <Link src={`${DID_VIEW_BASE_URL}${artwork.did}`} style={styles.artworkDid}>
+              {artwork.did}
+            </Link>
+          )}
           <Text style={styles.artworkType}>
             {artwork.metadata?.core?.mainCategory}
             {artwork.metadata?.core?.subCategory && ` | ${artwork.metadata.core.subCategory}`}
@@ -206,8 +205,18 @@ const CoaDocument = ({ artwork }: ArtworkCoaProps) => (
 );
 
 const ArtworkCoaPreview = ({ artwork }: ArtworkCoaProps) => {
+  const imageUrl = artwork.main_image
+    ? getArtworkWatermarkedPublicUrl(artwork.main_image)
+    : null;
+
+  const hasSize =
+    artwork.metadata?.size?.width &&
+    artwork.metadata?.size?.height &&
+    artwork.metadata?.size?.measurementUnit;
+
   return (
     <div>
+      {/* Download button */}
       <div className="flex items-center gap-2 mb-6 w-full flex-wrap">
         <p className="text-2xl font-bold flex-1">Certificate of Authenticity</p>
         <PDFDownloadLink
@@ -225,9 +234,115 @@ const ArtworkCoaPreview = ({ artwork }: ArtworkCoaProps) => {
         </PDFDownloadLink>
       </div>
 
-      <PDFViewer className="w-full" style={{ height: '80vh' }}>
-        <CoaDocument artwork={artwork} />
-      </PDFViewer>
+      {/* Native HTML certificate — renders on all devices */}
+      <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+        <div className="p-6 sm:p-8 space-y-6">
+
+          {/* Header row */}
+          <div className="flex flex-wrap justify-between gap-y-1 text-[11px] text-[#4a4a49]">
+            <span>Certificate Number: 2022002268</span>
+            <span>Issue Date: 2025-10-06</span>
+            <span className="font-semibold">ARTRACX</span>
+          </div>
+
+          {/* Title */}
+          <div className="border-b border-[#cccccc] pb-4">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-wide text-slate-900">
+              CERTIFICATE OF AUTHENTICITY
+            </h2>
+          </div>
+
+          {/* Artwork title / DID / type */}
+          <div>
+            <p className="text-lg sm:text-xl font-bold" style={{ color: '#10797b' }}>
+              {artwork.title}
+              {artwork.metadata?.core?.creationDate && (
+                <span> ({artwork.metadata.core.creationDate})</span>
+              )}
+            </p>
+            {artwork.did && (
+              <a
+                href={`${DID_VIEW_BASE_URL}${artwork.did}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold mt-1 break-all hover:underline block"
+                style={{ color: '#ea5a1d' }}
+              >
+                {artwork.did}
+              </a>
+            )}
+            {(artwork.metadata?.core?.mainCategory) && (
+              <p className="text-sm mt-0.5" style={{ color: '#7f7f7f' }}>
+                {artwork.metadata.core.mainCategory}
+                {artwork.metadata.core.subCategory && ` | ${artwork.metadata.core.subCategory}`}
+              </p>
+            )}
+          </div>
+
+          {/* Detail section: description + meta / image */}
+          <div className="flex gap-5 items-start">
+            <div className="flex-1 space-y-3 min-w-0">
+              {artwork.description && (
+                <p className="text-xs leading-relaxed" style={{ color: '#4a4a49' }}>
+                  {artwork.description}
+                </p>
+              )}
+              {artwork.metadata?.core?.referenceNumber && (
+                <div className="flex gap-2 text-xs">
+                  <span className="font-semibold shrink-0 w-32" style={{ color: '#ea5a1d' }}>Reference Number:</span>
+                  <span style={{ color: '#4a4a49' }}>{artwork.metadata.core.referenceNumber}</span>
+                </div>
+              )}
+              {hasSize && (
+                <div className="flex gap-2 text-xs">
+                  <span className="font-semibold shrink-0 w-32" style={{ color: '#ea5a1d' }}>Size:</span>
+                  <span style={{ color: '#4a4a49' }}>
+                    {artwork.metadata.size.width}{artwork.metadata.size.measurementUnit} (W) × {artwork.metadata.size.height}{artwork.metadata.size.measurementUnit} (H)
+                  </span>
+                </div>
+              )}
+              {artwork.metadata?.core?.conditionReport && (
+                <div className="flex gap-2 text-xs">
+                  <span className="font-semibold shrink-0 w-32" style={{ color: '#ea5a1d' }}>Condition:</span>
+                  <span style={{ color: '#4a4a49' }}>{artwork.metadata.core.conditionReport}</span>
+                </div>
+              )}
+            </div>
+
+            {imageUrl && (
+              <div className="shrink-0 w-28 sm:w-40 rounded-xl overflow-hidden border border-slate-100">
+                <img
+                  src={imageUrl}
+                  alt={artwork.title || 'Artwork'}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#cccccc]">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold" style={{ color: '#10797b' }}>
+                Information Provided By
+              </p>
+              <p className="text-xs" style={{ color: '#4a4a49' }}>
+                {artwork.owner_id?.username || 'Owner'}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold" style={{ color: '#10797b' }}>
+                Certificate Issued By
+              </p>
+              <p className="text-xs" style={{ color: '#4a4a49' }}>ARTRACX by Art Group</p>
+              <p className="text-xs" style={{ color: '#4a4a49' }}>9/F Sing Shun Centre</p>
+              <p className="text-xs" style={{ color: '#4a4a49' }}>495 Castle Peak Road, Lai Chi Kok</p>
+              <p className="text-xs" style={{ color: '#4a4a49' }}>Hong Kong</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 };
