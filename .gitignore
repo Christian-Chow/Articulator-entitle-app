@@ -22,3 +22,6 @@ AIGC
 
 # Vite (old)
 .vite
+
+# Backend uploads
+backend/uploads

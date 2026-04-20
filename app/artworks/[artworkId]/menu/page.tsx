@@ -4,8 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Header from '@/components/Header';
-import StatusBar from '@/components/StatusBar';
-import HomePage from '@/components/pages/HomePage';
+import MenuOption from '@/components/pages/MenuOption';
 
 type Artwork = {
   id: string;
@@ -67,8 +66,6 @@ export default function ArtworkMenuPage() {
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] font-sans text-slate-900 overflow-x-hidden pb-10">
-      <StatusBar />
-
       <Header
         subtitle={headerSubtitle}
         title={headerTitle}
@@ -80,7 +77,7 @@ export default function ArtworkMenuPage() {
       />
 
       <main className="px-6">
-        <HomePage isLoggedIn={isLoggedIn} />
+        <MenuOption isLoggedIn={isLoggedIn} artworkId={artworkId} />
       </main>
     </div>
   );
